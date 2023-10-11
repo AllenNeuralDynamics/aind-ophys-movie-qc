@@ -585,7 +585,10 @@ if __name__ == "__main__":  # pragma: nocover
     dataset_name = "data"
 
     input_dir = Path(args.input_dir)
+    ouptut_dir = Path(args.output_dir)
     h5_file = [i for i in list(input_dir.glob("*/*")) if "registered.h5" in str(i)][0]
+    experiment_id = h5_file.name.split("_")[0]
+    output_dir = make_output_directory(output_dir, experiment_id)
     processing_json_fp = h5_file.parent / "processing.json"
     with open(processing_json_fp, "r") as j:
         data = json.load(j)
@@ -644,7 +647,7 @@ if __name__ == "__main__":  # pragma: nocover
     # We remove extension
     base_file = os.path.splitext(base_file)[0]
 
-    save_figure_to_storage(fig_epilespy, args.output_dir, base_file, "epilepsy_probability")
+    save_figure_to_storage(fig_epilespy, output_dir, base_file, "epilepsy_probability")
 
     # The following add the dictionary returned by get_simple_snr_metrics to the metrics dictionary
     metrics.update(get_simple_snr_metrics(cropped_video))
@@ -665,22 +668,22 @@ if __name__ == "__main__":  # pragma: nocover
 
     save_figure_to_storage(
         plot_projection_image(small_cropped_video),
-        args.output_dir,
+        output_dir,
         base_file,
         "mean_projection_image",
     )
 
     save_figure_to_storage(
-        plot_projection_image(start_section), args.output_dir, base_file, "start_projection_image"
+        plot_projection_image(start_section), output_dir, base_file, "start_projection_image"
     )
 
     save_figure_to_storage(
-        plot_projection_image(end_section), args.output_dir, base_file, "end_projection_image"
+        plot_projection_image(end_section), output_dir, base_file, "end_projection_image"
     )
 
     rois_data, roi_figure = get_and_plot_basic_segmentation(start_section)
 
-    save_figure_to_storage(roi_figure, args.output_dir, base_file, "basic_segmentation_image")
+    save_figure_to_storage(roi_figure, output_dir, base_file, "basic_segmentation_image")
 
     metrics.update(rois_data)
     metrics.update(photon_gain_parameters)
@@ -732,7 +735,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     save_figure_to_storage(
         plot_avg_intensity_progression(full_length_cropped_video, binning=full_length_binning),
-        args.output_dir,
+        output_dir,
         base_file,
         "physio_intensity_plot",
     )
@@ -741,14 +744,14 @@ if __name__ == "__main__":  # pragma: nocover
         plot_intensity_histogram(
             cropped_video, min_range=args.min_pixel_range, max_range=args.max_pixel_range
         ),
-        args.output_dir,
+        output_dir,
         base_file,
         "physio_intensity_hist",
     )
 
     save_figure_to_storage(
         plot_poisson_curve(photon_gain_parameters),
-        args.output_dir,
+        output_dir,
         base_file,
         "physio_poisson_plot",
     )
@@ -765,5 +768,5 @@ if __name__ == "__main__":  # pragma: nocover
     metrics.pop("all_neuropils_photons_per_rois_per_frame")
 
     # We save the metrics to a json file
-    with open(os.path.join(args.output_dir, base_file + "_metrics.json"), "w") as f:
+    with open(os.path.join(output_dir, base_file + "_metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
