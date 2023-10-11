@@ -496,6 +496,27 @@ def save_figure_to_storage(figure, storage_path, root_filename, image_name, dpi=
     figure.savefig(filepath, dpi=dpi)
     plt.close(figure)
 
+def make_output_directory(output_dir: str, experiment_id: str = None) -> str:
+    """Creates the output directory if it does not exist
+
+    Parameters
+    ----------
+    output_dir: str
+        output directory
+    experiment_id: str
+        experiment_id number
+
+    Returns
+    -------
+    output_dir: str
+        output directory
+    """
+    if experiment_id:
+        output_dir = os.path.join(output_dir, experiment_id)
+    else:
+        output_dir = os.path.join(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    return output_dir
 
 if __name__ == "__main__":  # pragma: nocover
     # Create an ArgumentParser object
