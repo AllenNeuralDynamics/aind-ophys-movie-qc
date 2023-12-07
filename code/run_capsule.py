@@ -584,7 +584,7 @@ if __name__ == "__main__":  # pragma: nocover
     dataset_name = "data"
 
     output_dir = Path(args.output_dir)
-    h5_file = glob.glob(input_dir)[0]
+    h5_file = Path(glob.glob(input_dir)[0])
     experiment_id = h5_file.name.split("_")[0]
     output_dir = make_output_directory(output_dir, experiment_id)
     processing_json_fp = h5_file.parent / "processing.json"
