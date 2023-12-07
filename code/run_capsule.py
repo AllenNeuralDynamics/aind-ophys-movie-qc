@@ -568,6 +568,13 @@ if __name__ == "__main__":  # pragma: nocover
     )
 
     parser.add_argument(
+        "--frame_rate",
+        type=float,
+        default=0,
+        help=("Optional argument to provide frame rate if not available."),
+    )
+
+    parser.add_argument(
         "--dff_single_event_size",
         type=float,
         default=0.15,
@@ -587,10 +594,15 @@ if __name__ == "__main__":  # pragma: nocover
     h5_file = Path(glob.glob(args.input_searchpath)[0])
     experiment_id = h5_file.name.split("_")[0]
     output_dir = make_output_directory(output_dir, experiment_id)
-    processing_json_fp = h5_file.parent.parent.parent / "processing.json"
-    with open(processing_json_fp, "r") as j:
-        data = json.load(j)
-    frame_rate = data["data_processes"][0]["parameters"]["movie_frame_rate_hz"]
+    
+    frame_rate = args.frame_rate
+
+    if frame_rate == 0:
+        processing_json_fp = h5_file.parent.parent.parent / "processing.json"
+        with open(processing_json_fp, "r") as j:
+            data = json.load(j)
+        frame_rate = data["data_processes"][0]["parameters"]["movie_frame_rate_hz"]
+
     with h5py.File(h5_file, "r") as h5_pointer:
         data_pointer = h5_pointer[dataset_name]
 
