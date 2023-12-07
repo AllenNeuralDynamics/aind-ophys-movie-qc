@@ -587,7 +587,7 @@ if __name__ == "__main__":  # pragma: nocover
     h5_file = Path(glob.glob(args.input_searchpath)[0])
     experiment_id = h5_file.name.split("_")[0]
     output_dir = make_output_directory(output_dir, experiment_id)
-    processing_json_fp = h5_file.parent / "processing.json"
+    processing_json_fp = h5_file.parent.parent / "processing.json"
     with open(processing_json_fp, "r") as j:
         data = json.load(j)
     frame_rate = data["data_processes"][0]["parameters"]["movie_frame_rate_hz"]
