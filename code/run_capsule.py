@@ -12,7 +12,7 @@ from skimage import io, color, filters, measure
 import matplotlib.patches as patches
 from scipy import ndimage, signal
 from pathlib import Path
-
+import glob
 
 def get_and_plot_epilepsy_probability(
     cropped_video, frame_rate, signal_threshold=10.0, min_width=0.1, max_width=0.3
@@ -523,9 +523,8 @@ if __name__ == "__main__":  # pragma: nocover
     parser = argparse.ArgumentParser(description="Raw movie QC")
 
     parser.add_argument(
-        "-i", "--input-dir", type=str, help="Parent directory of raw movie", default="../data/"
+        "-i", "--input-dir", type=str, help="Regular expression to input hdf5 movie. The first one found is picked", default="../data/*/*/*registered.h5"
     )
-
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="/results/"
     )
@@ -584,9 +583,8 @@ if __name__ == "__main__":  # pragma: nocover
     # name of the dataset in the hdf5 file
     dataset_name = "data"
 
-    input_dir = Path(args.input_dir)
     output_dir = Path(args.output_dir)
-    h5_file = [i for i in list(input_dir.glob("*/*")) if "registered.h5" in str(i)][0]
+    h5_file = glob.glob(input_dir)[0]
     experiment_id = h5_file.name.split("_")[0]
     output_dir = make_output_directory(output_dir, experiment_id)
     processing_json_fp = h5_file.parent / "processing.json"
