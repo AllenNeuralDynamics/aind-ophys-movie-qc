@@ -3,7 +3,7 @@ FROM registry.codeocean.allenneuraldynamics.org/codeocean/jupyterlab:3.6.1-minic
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV VERSION="0.1.0"
-ENV REPO_URL=https://codeocean.allenneuraldynamics.org/capsule/2921644/tree
+ENV REPO_URL=https://github.com/AllenNeuralDynamics/aind-ophys-movie-qc.git
 ARG GIT_ASKPASS
 ARG GIT_ACCESS_TOKEN
 COPY git-askpass /
