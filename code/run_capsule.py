@@ -14,6 +14,56 @@ from scipy import ndimage, signal
 from pathlib import Path
 import glob
 
+
+def write_output_metadata(
+    metadata: dict,
+    process_name: str,
+    input_fp: Union[str, Path],
+    output_fp: Union[str, Path],
+    start_date_time: dt,
+) -> None:
+    """Writes output metadata to plane processing.json
+
+    Parameters
+    ----------
+    metadata: dict
+        parameters from suite2p motion correction
+    input_fp: str
+        path to data input
+    output_fp: str
+        path to data output
+    """
+    processing = Processing(
+        processing_pipeline=PipelineProcess(
+            processor_full_name="Multplane Ophys Processing Pipeline",
+            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/5472403/tree",
+            pipeline_version="0.1.0",
+            data_processes=[
+                DataProcess(
+                    name=process_name,
+                    software_version=os.getenv("VERSION"),
+                    start_date_time=start_date_time,  # TODO: Add actual dt
+                    end_date_time=dt.now(tz.utc),  # TODO: Add actual dt
+                    input_location=str(input_fp),
+                    output_location=str(output_fp),
+                    code_url=(os.getenv("REPO_URL")),
+                    parameters=metadata,
+                )
+            ],
+        )
+    )
+    print(f"Output filepath: {output_fp}")
+    with open(Path(output_fp).parent.parent / "processing.json", "r") as f:
+        proc_data = json.load(f)
+    processing.write_standard_file(output_directory=Path(output_fp).parent.parent)
+    with open(Path(output_fp).parent.parent / "processing.json", "r") as f:
+        dct_data = json.load(f)
+    proc_data["processing_pipeline"]["data_processes"].append(
+        dct_data["processing_pipeline"]["data_processes"][0]
+    )
+    with open(Path(output_fp).parent.parent / "processing.json", "w") as f:
+        json.dump(proc_data, f, indent=4)
+        
 def get_and_plot_epilepsy_probability(
     cropped_video, frame_rate, signal_threshold=10.0, min_width=0.1, max_width=0.3
 ):
@@ -496,12 +546,12 @@ def save_figure_to_storage(figure, storage_path, root_filename, image_name, dpi=
     figure.savefig(filepath, dpi=dpi)
     plt.close(figure)
 
-def make_output_directory(output_dir: str, experiment_id: str = None) -> str:
+def make_output_directory(output_dir: Path, experiment_id: str) -> str:
     """Creates the output directory if it does not exist
 
     Parameters
     ----------
-    output_dir: str
+    output_dir: Path
         output directory
     experiment_id: str
         experiment_id number
@@ -511,11 +561,11 @@ def make_output_directory(output_dir: str, experiment_id: str = None) -> str:
     output_dir: str
         output directory
     """
-    if experiment_id:
-        output_dir = os.path.join(output_dir, experiment_id)
-    else:
-        output_dir = os.path.join(output_dir)
-    os.makedirs(output_dir, exist_ok=True)
+    output_dir = output_dir / experiment_id
+    output_dir.mkdir(exist_ok=True)
+    output_dir = output_dir / "movie_qc"
+    output_dir.mkdir(exist_ok=True)
+
     return output_dir
 
 if __name__ == "__main__":  # pragma: nocover
@@ -598,11 +648,14 @@ if __name__ == "__main__":  # pragma: nocover
     frame_rate = args.frame_rate
 
     if frame_rate == 0:
-        processing_json_fp = h5_file.parent.parent.parent / "processing.json"
+        processing_json_fp = h5_file.parent.parent / "processing.json"
         with open(processing_json_fp, "r") as j:
             data = json.load(j)
-        frame_rate = data["data_processes"][0]["parameters"]["movie_frame_rate_hz"]
-
+        try:
+            frame_rate = data["data_processes"][0]["parameters"]["movie_frame_rate_hz"]
+        except KeyError:
+            frame_rate =  data['processing_pipeline']['data_processes'][0]['parameters']['movie_frame_rate_hz']
+    shutil.copy
     with h5py.File(h5_file, "r") as h5_pointer:
         data_pointer = h5_pointer[dataset_name]
 
