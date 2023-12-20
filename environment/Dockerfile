@@ -20,4 +20,5 @@ RUN pip install -U --no-cache-dir \
     oasis-deconv==0.2.0 \
     scikit-image==0.21.0 \
     scikit-learn==1.3.1 \
-    scipy==1.11.2
+    scipy==1.11.2 \
+    aind-data-schema==0.22.0
