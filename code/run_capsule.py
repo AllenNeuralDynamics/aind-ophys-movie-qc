@@ -46,6 +46,7 @@ def write_output_metadata(
             data_processes=[
                 DataProcess(
                     name=process_name,
+                    notes="aind-ophys-movie-qc results",
                     software_version=os.getenv("VERSION"),
                     start_date_time=start_date_time,
                     end_date_time=dt.now(tz.utc), 
@@ -576,7 +577,7 @@ def make_output_directory(output_dir: Path, experiment_id: str) -> str:
 if __name__ == "__main__":  # pragma: nocover
     # Create an ArgumentParser object
     parser = argparse.ArgumentParser(description="Raw movie QC")
-
+    start_time = dt.now(tz.utc)
     parser.add_argument(
         "-i", "--input-searchpath", type=str, help="Regular expression to input hdf5 movie. The first one found is picked", default="../data/*/*/*registered.h5"
     )
@@ -823,7 +824,7 @@ if __name__ == "__main__":  # pragma: nocover
         base_file,
         "physio_poisson_plot",
     )
-
+    
     # We remove stuff we don't need to save that would take space
     metrics.pop("mean")
     metrics.pop("var")
@@ -835,6 +836,15 @@ if __name__ == "__main__":  # pragma: nocover
     metrics.pop("sum_rois_neuropil")
     metrics.pop("all_neuropils_photons_per_rois_per_frame")
 
+    
     # We save the metrics to a json file
     with open(os.path.join(output_dir, base_file + "_metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
+    
+    write_output_metadata(
+        metrics,
+        "Other",
+        str(h5_file),
+        os.path.join(output_dir, base_file + "_metrics.json"),
+        start_time,
+    )
