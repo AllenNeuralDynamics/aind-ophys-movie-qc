@@ -3,3 +3,4 @@ name: aind-ophys-movie-qc
 description: Basic structure of a capsule to be customized as needed.
 authors:
 - name: AIND
+- name: Jerome Lecoq
