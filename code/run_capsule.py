@@ -13,7 +13,12 @@ import matplotlib.patches as patches
 from scipy import ndimage, signal
 from pathlib import Path
 import glob
-
+import os 
+from aind_data_schema.core.processing import Processing, DataProcess, ProcessName, PipelineProcess
+from typing import Union
+from datetime import datetime as dt
+from datetime import timezone as tz
+import shutil
 
 def write_output_metadata(
     metadata: dict,
@@ -42,8 +47,8 @@ def write_output_metadata(
                 DataProcess(
                     name=process_name,
                     software_version=os.getenv("VERSION"),
-                    start_date_time=start_date_time,  # TODO: Add actual dt
-                    end_date_time=dt.now(tz.utc),  # TODO: Add actual dt
+                    start_date_time=start_date_time,
+                    end_date_time=dt.now(tz.utc), 
                     input_location=str(input_fp),
                     output_location=str(output_fp),
                     code_url=(os.getenv("REPO_URL")),
@@ -63,7 +68,7 @@ def write_output_metadata(
     )
     with open(Path(output_fp).parent.parent / "processing.json", "w") as f:
         json.dump(proc_data, f, indent=4)
-        
+
 def get_and_plot_epilepsy_probability(
     cropped_video, frame_rate, signal_threshold=10.0, min_width=0.1, max_width=0.3
 ):
@@ -655,7 +660,7 @@ if __name__ == "__main__":  # pragma: nocover
             frame_rate = data["data_processes"][0]["parameters"]["movie_frame_rate_hz"]
         except KeyError:
             frame_rate =  data['processing_pipeline']['data_processes'][0]['parameters']['movie_frame_rate_hz']
-    shutil.copy
+    shutil.copy(processing_json_fp, output_dir.parent)
     with h5py.File(h5_file, "r") as h5_pointer:
         data_pointer = h5_pointer[dataset_name]
 
