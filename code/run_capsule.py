@@ -20,12 +20,12 @@ from datetime import datetime as dt
 from datetime import timezone as tz
 import shutil
 
+
 def write_output_metadata(
     metadata: dict,
-    process_name: str,
-    input_fp: Union[str, Path],
-    output_fp: Union[str, Path],
-    start_date_time: dt,
+    raw_movie: Union[str, Path],
+    motion_corrected_movie: Union[str, Path],
+    output_dir: Union[str, Path],
 ) -> None:
     """Writes output metadata to plane processing.json
 
@@ -33,42 +33,37 @@ def write_output_metadata(
     ----------
     metadata: dict
         parameters from suite2p motion correction
-    input_fp: str
-        path to data input
-    output_fp: str
-        path to data output
+    raw_movie: str
+        path to raw movies
+    motion_corrected_movie: str
+        path to motion corrected movies
     """
     processing = Processing(
         processing_pipeline=PipelineProcess(
             processor_full_name="Multplane Ophys Processing Pipeline",
-            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/5472403/tree",
+            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/4030161/tree",
             pipeline_version="0.1.0",
             data_processes=[
                 DataProcess(
-                    name=process_name,
-                    notes="aind-ophys-movie-qc results",
-                    software_version=os.getenv("VERSION"),
-                    start_date_time=start_date_time,
-                    end_date_time=dt.now(tz.utc), 
-                    input_location=str(input_fp),
-                    output_location=str(output_fp),
-                    code_url=(os.getenv("REPO_URL")),
+                    name=ProcessName.VIDEO_MOTION_CORRECTION,
+                    software_version="0.1.0",
+                    start_date_time=dt.now(),  # TODO: Add actual dt
+                    end_date_time=dt.now(),  # TODO: Add actual dt
+                    input_location=str(raw_movie),
+                    output_location=str(motion_corrected_movie),
+                    code_url=(
+                        "https://github.com/AllenNeuralDynamics/"
+                        "aind-ophys-motion-correction/tree/main/code"
+                    ),
                     parameters=metadata,
                 )
             ],
         )
     )
-    print(f"Output filepath: {output_fp}")
-    with open(Path(output_fp).parent.parent / "processing.json", "r") as f:
-        proc_data = json.load(f)
-    processing.write_standard_file(output_directory=Path(output_fp).parent.parent)
-    with open(Path(output_fp).parent.parent / "processing.json", "r") as f:
-        dct_data = json.load(f)
-    proc_data["processing_pipeline"]["data_processes"].append(
-        dct_data["processing_pipeline"]["data_processes"][0]
-    )
-    with open(Path(output_fp).parent.parent / "processing.json", "w") as f:
-        json.dump(proc_data, f, indent=4)
+    if isinstance(output_dir, str):
+        output_dir = Path(output_dir)
+    print(f"~~~~~~~~~~~~~~Writing output: {output_dir}")
+    processing.write_standard_file(output_directory=output_dir)
 
 def get_and_plot_epilepsy_probability(
     cropped_video, frame_rate, signal_threshold=10.0, min_width=0.1, max_width=0.3
