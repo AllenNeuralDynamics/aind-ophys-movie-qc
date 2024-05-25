@@ -41,7 +41,7 @@ def write_output_metadata(
     url: str
         url to code repository
     """
-    original_proc_file = input_fp.parent
+    original_proc_file = Path(input_fp).parent
     with open(original_proc_file / "processing.json", "r") as f:
         proc_data = json.load(f)
     prev_processing = Processing(**proc_data)
@@ -56,7 +56,7 @@ def write_output_metadata(
                     software_version="0.1.0",
                     start_date_time=start_date_time,  # TODO: Add actual dt
                     end_date_time=dt.now(tz.utc),  # TODO: Add actual dt
-                    input_location=str(input_fp),
+                    input_location=input_fp,
                     output_location=str(output_fp),
                     code_url=(url),
                     parameters=metadata,
