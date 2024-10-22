@@ -2,7 +2,10 @@
 FROM registry.codeocean.allenneuraldynamics.org/codeocean/jupyterlab:3.6.1-miniconda4.12.0-python3.9-ubuntu20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-ENV VERSION="0.1.0"
+ENV PIPELINE_URL="https://codeocean.allenneuraldynamics.org/capsule/6761117/tree"
+ENV PIPELINE_VERSION="2.0"
+ENV VERSION="3.0"
+
 ENV REPO_URL=https://github.com/AllenNeuralDynamics/aind-ophys-movie-qc.git
 ARG GIT_ASKPASS
 ARG GIT_ACCESS_TOKEN

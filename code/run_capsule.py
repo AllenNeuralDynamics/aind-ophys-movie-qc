@@ -17,8 +17,6 @@ import os
 from aind_data_schema.core.processing import Processing, DataProcess, ProcessName, PipelineProcess
 from typing import Union
 from datetime import datetime as dt
-from datetime import timezone as tz
-import shutil
 
 
 def write_output_metadata(
@@ -41,7 +39,7 @@ def write_output_metadata(
     url: str
         url to code repository
     """
-    original_proc_file = Path(input_fp).parent
+    original_proc_file = next(Path("../data").rglob("processing.json))
     with open(original_proc_file / "processing.json", "r") as f:
         proc_data = json.load(f)
     prev_processing = Processing(**proc_data)
@@ -55,7 +53,7 @@ def write_output_metadata(
                     name=ProcessName.VIDEO_PLANE_DECROSSTALK,
                     software_version="0.1.0",
                     start_date_time=start_date_time,  # TODO: Add actual dt
-                    end_date_time=dt.now(tz.utc),  # TODO: Add actual dt
+                    end_date_time=dt.now(),  # TODO: Add actual dt
                     input_location=input_fp,
                     output_location=str(output_fp),
                     code_url=(url),
@@ -574,7 +572,7 @@ def make_output_directory(output_dir: Path, experiment_id: str) -> str:
 if __name__ == "__main__":  # pragma: nocover
     # Create an ArgumentParser object
     parser = argparse.ArgumentParser(description="Raw movie QC")
-    start_time = dt.now(tz.utc)
+    start_time = dt.now()
     parser.add_argument(
         "-i", "--input-searchpath", type=str, help="Regular expression to input hdf5 movie. The first one found is picked", default="../data/*/*/*registered.h5"
     )
@@ -658,7 +656,6 @@ if __name__ == "__main__":  # pragma: nocover
             frame_rate = data["data_processes"][0]["parameters"]["movie_frame_rate_hz"]
         except KeyError:
             frame_rate =  data['processing_pipeline']['data_processes'][0]['parameters']['movie_frame_rate_hz']
-    shutil.copy(processing_json_fp, output_dir.parent)
     with h5py.File(h5_file, "r") as h5_pointer:
         data_pointer = h5_pointer[dataset_name]
 
