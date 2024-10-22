@@ -21,4 +21,5 @@ RUN pip install -U --no-cache-dir \
     scikit-image==0.21.0 \
     scikit-learn==1.3.1 \
     scipy==1.11.2 \
-    aind-data-schema==0.22.0
+    aind-data-schema==0.22.0 \
+    pydantic==2.8.2
