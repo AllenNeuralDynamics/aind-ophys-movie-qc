@@ -1,20 +1,20 @@
-import numpy as np
-from scipy.linalg import LinAlgError
-from scipy.stats import gaussian_kde
-import matplotlib.pyplot as plt
-import oasis
-from oasis.functions import deconvolve as oasis_deconvolve
 import argparse
-import h5py
-import os
-import json
-from skimage import filters, measure
-import matplotlib.patches as patches
-from scipy import ndimage
-from pathlib import Path
 import glob
+import json
 import os
 from datetime import datetime as dt
+from pathlib import Path
+
+import h5py
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
+import numpy as np
+import oasis
+from oasis.functions import deconvolve as oasis_deconvolve
+from scipy import ndimage
+from scipy.linalg import LinAlgError
+from scipy.stats import gaussian_kde
+from skimage import filters, measure
 
 
 def get_and_plot_epilepsy_probability(
@@ -515,22 +515,22 @@ def save_figure_to_storage(figure, storage_path, root_filename, image_name, dpi=
     plt.close(figure)
 
 
-def make_output_directory(output_dir: Path, experiment_id: str) -> str:
+def make_output_directory(output_dir: Path, unique_id: str) -> str:
     """Creates the output directory if it does not exist
 
     Parameters
     ----------
     output_dir: Path
         output directory
-    experiment_id: str
-        experiment_id number
+    unique_id: str
+        unique_id number
 
     Returns
     -------
     output_dir: str
         output directory
     """
-    output_dir = output_dir / experiment_id
+    output_dir = output_dir / unique_id
     output_dir.mkdir(exist_ok=True)
     output_dir = output_dir / "movie_qc"
     output_dir.mkdir(exist_ok=True)
@@ -549,10 +549,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Raw movie QC")
     parser.add_argument(
         "-i",
-        "--input-searchpath",
+        "--input-dir",
         type=str,
         help="Regular expression to input hdf5 movie. The first one found is picked",
-        default="../data/*/*/*registered.h5",
+        default="../data",
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="/results/"
@@ -638,9 +638,9 @@ if __name__ == "__main__":  # pragma: nocover
     dataset_name = "data"
 
     output_dir = Path(args.output_dir)
-    h5_file = Path(glob.glob(args.input_searchpath)[0])
-    experiment_id = h5_file.name.split("_")[0]
-    output_dir = make_output_directory(output_dir, experiment_id)
+    h5_file = next(Path(args.input_dir).rglob("*.h5"))
+    unique_id = h5_file.name.split("_")[0]
+    output_dir = make_output_directory(output_dir, unique_id)
 
     frame_rate = args.frame_rate
 
