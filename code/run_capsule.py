@@ -9,12 +9,19 @@ import h5py
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
-import oasis
 from oasis.functions import deconvolve as oasis_deconvolve
 from scipy import ndimage
 from scipy.linalg import LinAlgError
 from scipy.stats import gaussian_kde
 from skimage import filters, measure
+from aind_data_schema.core.quality_control import (
+    QualityControl,
+    QCEvaluation,
+    QCMetric,
+    QCStatus,
+    Stage,
+)
+
 
 
 def get_and_plot_epilepsy_probability(
@@ -71,7 +78,7 @@ def get_and_plot_epilepsy_probability(
     plt.ylabel("DFF")
 
     plt.tight_layout()
-    return float(nb_epileptic_events) / len(prominence_data), fig
+    return round(float(nb_epileptic_events),2) / len(prominence_data), fig
 
 
 def get_spike_prominence_and_width(
@@ -217,7 +224,7 @@ def get_and_plot_basic_segmentation(
     neuropil_sum = []
 
     roi_data = {}
-    roi_data["rois_threshold"] = otsu_threshold
+    roi_data["rois_threshold"] = round(otsu_threshold,2)
 
     for region in measure.regionprops(label_image):
         if region.area > min_object_size and region.area < max_object_size:
@@ -236,13 +243,13 @@ def get_and_plot_basic_segmentation(
             plt.gca().add_patch(rect)
 
     roi_data["nb_rois"] = len(roi_intensities)
-    roi_data["mean_rois_intensity"] = np.mean(roi_intensities)
-    roi_data["std_rois_intensity"] = np.std(roi_intensities)
+    roi_data["mean_rois_intensity"] = round(np.mean(roi_intensities),2)
+    roi_data["std_rois_intensity"] = round(np.std(roi_intensities),2)
     roi_data["all_rois_intensity"] = roi_intensities
     roi_data["sum_rois_intensity"] = roi_sum
-    roi_data["median_sum_rois_intensity"] = np.median(roi_sum)
+    roi_data["median_sum_rois_intensity"] = round(np.median(roi_sum),2)
     roi_data["sum_rois_neuropil"] = neuropil_sum
-    roi_data["median_sum_rois_neuropil"] = np.median(neuropil_sum)
+    roi_data["median_sum_rois_neuropil"] = round(np.median(neuropil_sum),2)
 
     return roi_data, figure
 
@@ -326,7 +333,7 @@ def get_saturation_metrics(cropped_video, min_pixel_range, max_pixel_range):
     return {
         "nb_saturated_pixels": nb_saturated_pixels,
         "nb_low_pixels": int(nb_undersat_pixels),
-        "nb_low_pixels_perc": nb_undersat_pixels_perc,
+        "nb_low_pixels_perc": round(nb_undersat_pixels_perc,2),
     }
 
 
@@ -360,9 +367,9 @@ def get_simple_snr_metrics(cropped_video):
     simple_snr_array = cropped_video.mean(axis=(1, 2)) / cropped_video.std(axis=(1, 2))
 
     return {
-        "simple_snr_mean": simple_snr_array.mean(),
-        "simple_snr_med": np.median(simple_snr_array),
-        "simple_snr_std": simple_snr_array.std(),
+        "simple_snr_mean": round(simple_snr_array.mean(),2),
+        "simple_snr_med": round(np.median(simple_snr_array),2),
+        "simple_snr_std": round(simple_snr_array.std(),2),
     }
 
 
@@ -473,9 +480,9 @@ def get_photon_gain_parameters(cropped_video, max_pixel_range, perc_min=3, perc_
         "mean": _mean_filt,
         "photon_gain": slope,
         "photon_offset": offset,
-        "photon_flux_median_per_pixel_per_frame": np.median(photon_per_pixel_per_frame),
+        "photon_flux_median_per_pixel_per_frame": round(np.median(photon_per_pixel_per_frame),2),
         "all_pixels_photon_per_pixel_per_frame": photon_per_pixel_per_frame,
-        "background_noise": background_noise_mean,
+        "background_noise": round(background_noise_mean,2),
     }
 
 
@@ -763,22 +770,22 @@ if __name__ == "__main__":  # pragma: nocover
             metrics["sum_rois_neuropil"], metrics["photon_offset"], metrics["photon_gain"]
         )
     )
-
-    metrics["mean_photons_per_roi_per_frame"] = np.mean(
-        metrics["all_rois_photons_per_rois_per_frame"]
+    metrics["photon_offset"] = round(metrics["photon_offset"],2)
+    metrics["photon_gain"] = round(metrics["photon_gain"],2)
+    metrics["mean_photons_per_roi_per_frame"] = round(np.mean(
+        metrics["all_rois_photons_per_rois_per_frame"],2)
     )
-    metrics["std_photons_per_roi_per_frame"] = np.std(
+    metrics["std_photons_per_roi_per_frame"] = round(np.std(metrics["all_rois_photons_per_rois_per_frame"]),2)
+    metrics["mean_photons_per_roi_per_s"] = round(
+        frame_rate * np.mean(
         metrics["all_rois_photons_per_rois_per_frame"]
-    )
-    metrics["mean_photons_per_roi_per_s"] = frame_rate * np.mean(
+    ),2)
+    metrics["std_photons_per_roi_per_s"] = round(frame_rate * np.std(
         metrics["all_rois_photons_per_rois_per_frame"]
-    )
-    metrics["std_photons_per_roi_per_s"] = frame_rate * np.std(
-        metrics["all_rois_photons_per_rois_per_frame"]
-    )
-    metrics["mean_photons_per_neuropil_per_s"] = frame_rate * np.mean(
+    ),2)
+    metrics["mean_photons_per_neuropil_per_s"] = round(frame_rate * np.mean(
         metrics["all_neuropils_photons_per_rois_per_frame"]
-    )
+    ),2)
     metrics["std_photons_per_neuropil_per_s"] = frame_rate * np.std(
         metrics["all_neuropils_photons_per_rois_per_frame"]
     )
@@ -800,7 +807,7 @@ if __name__ == "__main__":  # pragma: nocover
         args.dff_single_event_size,
     )
 
-    metrics["median_rois_dprime"] = np.median(metrics["all_rois_dprime"])
+    metrics["median_rois_dprime"] = round(np.median(metrics["all_rois_dprime"]),2)
     metrics["std_rois_dprime"] = np.std(metrics["all_rois_dprime"])
 
     save_figure_to_storage(
