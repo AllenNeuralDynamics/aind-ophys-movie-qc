@@ -645,7 +645,7 @@ if __name__ == "__main__":  # pragma: nocover
     dataset_name = "data"
 
     output_dir = Path(args.output_dir)
-    h5_file = next(Path(args.input_dir).rglob("*.h5"))
+    h5_file = next(Path(args.input_dir).rglob("*/motion_correction/*registered.h5"))
     unique_id = h5_file.name.split("_")[0]
     output_dir = make_output_directory(output_dir, unique_id)
 
@@ -772,8 +772,8 @@ if __name__ == "__main__":  # pragma: nocover
     )
     metrics["photon_offset"] = round(metrics["photon_offset"],2)
     metrics["photon_gain"] = round(metrics["photon_gain"],2)
-    metrics["mean_photons_per_roi_per_frame"] = round(np.mean(
-        metrics["all_rois_photons_per_rois_per_frame"],2)
+    metrics["mean_photons_per_roi_per_frame"] = np.mean(
+        metrics["all_rois_photons_per_rois_per_frame"]
     )
     metrics["std_photons_per_roi_per_frame"] = round(np.std(metrics["all_rois_photons_per_rois_per_frame"]),2)
     metrics["mean_photons_per_roi_per_s"] = round(
