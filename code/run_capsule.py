@@ -646,7 +646,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     output_dir = Path(args.output_dir)
     h5_file = next(Path(args.input_dir).rglob("*/motion_correction/*registered.h5"))
-    unique_id = h5_file.name.split("_")[0]
+    unique_id = h5_file.name.split("_")[-2:]
     output_dir = make_output_directory(output_dir, unique_id)
 
     frame_rate = args.frame_rate
