@@ -652,15 +652,11 @@ if __name__ == "__main__":  # pragma: nocover
     frame_rate = args.frame_rate
 
     if frame_rate == 0:
-        processing_json_fp = h5_file.parent / "processing.json"
+        processing_json_fp = h5_file.parent / "data_process.json"
         with open(processing_json_fp, "r") as j:
             data = json.load(j)
-        try:
-            frame_rate = data["data_processes"][0]["parameters"]["movie_frame_rate_hz"]
-        except KeyError:
-            frame_rate = data["processing_pipeline"]["data_processes"][0]["parameters"][
-                "movie_frame_rate_hz"
-            ]
+        frame_rate = data["parameters"]["movie_frame_rate_hz"]
+        
     with h5py.File(h5_file, "r") as h5_pointer:
         data_pointer = h5_pointer[dataset_name]
 
