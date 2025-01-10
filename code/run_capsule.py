@@ -14,13 +14,6 @@ from scipy import ndimage
 from scipy.linalg import LinAlgError
 from scipy.stats import gaussian_kde
 from skimage import filters, measure
-from aind_data_schema.core.quality_control import (
-    QualityControl,
-    QCEvaluation,
-    QCMetric,
-    QCStatus,
-    Stage,
-)
 
 
 
