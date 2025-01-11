@@ -1,69 +1,21 @@
+import argparse
+import glob
+import json
+import os
+from datetime import datetime as dt
+from pathlib import Path
+
+import h5py
+import matplotlib.patches as patches
+import matplotlib.pyplot as plt
 import numpy as np
+from oasis.functions import deconvolve as oasis_deconvolve
+from scipy import ndimage
 from scipy.linalg import LinAlgError
 from scipy.stats import gaussian_kde
-import matplotlib.pyplot as plt
-import oasis
-from oasis.functions import deconvolve as oasis_deconvolve
-import argparse
-import h5py
-import os
-import json
-from skimage import io, color, filters, measure
-import matplotlib.patches as patches
-from scipy import ndimage, signal
-from pathlib import Path
-import glob
-import os 
-from aind_data_schema.core.processing import Processing, DataProcess, ProcessName, PipelineProcess
-from typing import Union
-from datetime import datetime as dt
+from skimage import filters, measure
 
 
-def write_output_metadata(
-    metadata: dict,
-    input_fp: Union[str, Path],
-    output_fp: Union[str, Path],
-    url: str,
-    start_date_time: dt,
-) -> None:
-    """Writes output metadata to plane processing.json
-
-    Parameters
-    ----------
-    metadata: dict
-        parameters from suite2p motion correction
-    input_fp: str
-        path to data input
-    output_fp: str
-        path to data output
-    url: str
-        url to code repository
-    """
-    original_proc_file = next(Path("../data").rglob("processing.json))
-    with open(original_proc_file / "processing.json", "r") as f:
-        proc_data = json.load(f)
-    prev_processing = Processing(**proc_data)
-    processing = Processing(
-        processing_pipeline=PipelineProcess(
-            processor_full_name="Multplane Ophys Processing Pipeline",
-            pipeline_url="https://codeocean.allenneuraldynamics.org/capsule/5472403/tree",
-            pipeline_version="0.1.0",
-            data_processes=[
-                DataProcess(
-                    name=ProcessName.VIDEO_PLANE_DECROSSTALK,
-                    software_version="0.1.0",
-                    start_date_time=start_date_time,  # TODO: Add actual dt
-                    end_date_time=dt.now(),  # TODO: Add actual dt
-                    input_location=input_fp,
-                    output_location=str(output_fp),
-                    code_url=(url),
-                    parameters=metadata,
-                )
-            ],
-        )
-    )
-    prev_processing.processing_pipeline.data_processes.append(processing.processing_pipeline.data_processes[0])
-    prev_processing.write_standard_file(output_directory=Path(output_fp).parent)
 
 def get_and_plot_epilepsy_probability(
     cropped_video, frame_rate, signal_threshold=10.0, min_width=0.1, max_width=0.3
@@ -92,7 +44,9 @@ def get_and_plot_epilepsy_probability(
     )
     nb_epileptic_events = len(
         prominence_data[
-            (prominence_data > signal_threshold) & (widths > min_width) & (widths < max_width)
+            (prominence_data > signal_threshold)
+            & (widths > min_width)
+            & (widths < max_width)
         ]
     )
 
@@ -120,7 +74,9 @@ def get_and_plot_epilepsy_probability(
     return float(nb_epileptic_events) / len(prominence_data), fig
 
 
-def get_spike_prominence_and_width(denoised_signal, spike_events, frame_rate, spike_threshold=0.05):
+def get_spike_prominence_and_width(
+    denoised_signal, spike_events, frame_rate, spike_threshold=0.05
+):
     """Get the local prominence and width of each spike in a calcium trace.
 
     Local prominence is a measure of the strength of the spike relative to other spikes nearest to it.
@@ -149,7 +105,9 @@ def get_spike_prominence_and_width(denoised_signal, spike_events, frame_rate, sp
         if not pre_spike_idxs.any():
             pre_spike_idx = 0
         else:
-            pre_spike_idx = np.max(pre_spike_idxs)  # Nearest spike larger than local spike on left
+            pre_spike_idx = np.max(
+                pre_spike_idxs
+            )  # Nearest spike larger than local spike on left
 
         # Minimum signal between prev large spike and current spike
         pre_spikes = denoised_signal[pre_spike_idx:event_idx]
@@ -159,7 +117,9 @@ def get_spike_prominence_and_width(denoised_signal, spike_events, frame_rate, sp
         if not post_peak_idxs.any():
             post_peak_idx = len(denoised_signal)
         else:
-            post_peak_idx = np.min(post_peak_idxs)  # Nearest spike larger than local spike on right
+            post_peak_idx = np.min(
+                post_peak_idxs
+            )  # Nearest spike larger than local spike on right
 
         # Minimum signal between post large spike and current spike
         post_spikes = denoised_signal[event_idx:post_peak_idx]
@@ -219,7 +179,9 @@ def plot_projection_image(cropped_video, min_range=1, max_range=99):
     fig = plt.figure()
     image_project = np.mean(cropped_video, axis=0)
     list_pixel_limits = np.percentile(image_project.flatten(), [min_range, max_range])
-    plt.imshow(image_project, cmap="gray", vmin=list_pixel_limits[0], vmax=list_pixel_limits[1])
+    plt.imshow(
+        image_project, cmap="gray", vmin=list_pixel_limits[0], vmax=list_pixel_limits[1]
+    )
     plt.axis("off")
     return fig
 
@@ -241,7 +203,10 @@ def get_and_plot_basic_segmentation(
     figure = plt.figure()
     list_pixel_limits = np.percentile(neuropil_substracted.flatten(), [1, 99])
     plt.imshow(
-        neuropil_substracted, cmap="gray", vmin=list_pixel_limits[0], vmax=list_pixel_limits[1]
+        neuropil_substracted,
+        cmap="gray",
+        vmin=list_pixel_limits[0],
+        vmax=list_pixel_limits[1],
     )
     plt.axis("off")
 
@@ -522,7 +487,9 @@ def get_dprime_indicator(
     We improved Wilt et al formula to correct for the presence of non-responsive background neuropil, assuming a fixed DF/F given by the indicator. Note that if neuropil is null we end up with dff_single_event_size as the correcting factor is 1.
     """
     corrected_dff_single_event_size = (
-        dff_single_event_size * baseline_photon_flux / (baseline_photon_flux + neuropil_photon_flux)
+        dff_single_event_size
+        * baseline_photon_flux
+        / (baseline_photon_flux + neuropil_photon_flux)
     )
     d_prime = (
         np.sqrt((baseline_photon_flux + neuropil_photon_flux) * decay_time / 2)
@@ -547,34 +514,45 @@ def save_figure_to_storage(figure, storage_path, root_filename, image_name, dpi=
     figure.savefig(filepath, dpi=dpi)
     plt.close(figure)
 
-def make_output_directory(output_dir: Path, experiment_id: str) -> str:
+
+def make_output_directory(output_dir: Path, unique_id: str) -> str:
     """Creates the output directory if it does not exist
 
     Parameters
     ----------
     output_dir: Path
         output directory
-    experiment_id: str
-        experiment_id number
+    unique_id: str
+        unique_id number
 
     Returns
     -------
     output_dir: str
         output directory
     """
-    output_dir = output_dir / experiment_id
+    output_dir = output_dir / unique_id
     output_dir.mkdir(exist_ok=True)
     output_dir = output_dir / "movie_qc"
     output_dir.mkdir(exist_ok=True)
 
     return output_dir
 
-if __name__ == "__main__":  # pragma: nocover
-    # Create an ArgumentParser object
+
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments
+
+    Returns
+    -------
+    argparse.Namespace
+        parsed arguments
+    """
     parser = argparse.ArgumentParser(description="Raw movie QC")
-    start_time = dt.now()
     parser.add_argument(
-        "-i", "--input-searchpath", type=str, help="Regular expression to input hdf5 movie. The first one found is picked", default="../data/*/*/*registered.h5"
+        "-i",
+        "--input-dir",
+        type=str,
+        help="Regular expression to input hdf5 movie. The first one found is picked",
+        default="../data",
     )
     parser.add_argument(
         "-o", "--output-dir", type=str, help="Output directory", default="/results/"
@@ -583,18 +561,26 @@ if __name__ == "__main__":  # pragma: nocover
     # This is to constrain the analysis to a subset of frames
     # to reduce cost and increase speed
     parser.add_argument(
-        "--start_frame", type=int, default=1, help=("Start of movie block to use for main analysis")
+        "--start_frame",
+        type=int,
+        default=1,
+        help=("Start of movie block to use for main analysis"),
     )
 
     parser.add_argument(
-        "--end_frame", type=int, default=10000, help=("End of movie block to use for main analysis")
+        "--end_frame",
+        type=int,
+        default=10000,
+        help=("End of movie block to use for main analysis"),
     )
 
     parser.add_argument(
         "--crop",
         type=list,
         default=(30, 30),
-        help=("cropped area of movie to use for analysis. Useful to remove" " edge effects"),
+        help=(
+            "cropped area of movie to use for analysis. Useful to remove" " edge effects"
+        ),
     )
 
     parser.add_argument(
@@ -608,7 +594,9 @@ if __name__ == "__main__":  # pragma: nocover
         "--min_pixel_range",
         type=int,
         default=0,
-        help=("This is the pixel value below which we consider under-saturation occurred."),
+        help=(
+            "This is the pixel value below which we consider under-saturation occurred."
+        ),
     )
 
     parser.add_argument(
@@ -634,28 +622,34 @@ if __name__ == "__main__":  # pragma: nocover
         ),
     )
 
+    return parser.parse_args()
+
+
+if __name__ == "__main__":  # pragma: nocover
+    # Create an ArgumentParser object
+
+    start_time = dt.now()
+
     # Parse command-line arguments
-    args = parser.parse_args()
+    args = parse_args()
     # General settings
 
     # name of the dataset in the hdf5 file
     dataset_name = "data"
 
     output_dir = Path(args.output_dir)
-    h5_file = Path(glob.glob(args.input_searchpath)[0])
-    experiment_id = h5_file.name.split("_")[0]
-    output_dir = make_output_directory(output_dir, experiment_id)
-    
+    h5_file = next(Path(args.input_dir).rglob("*/motion_correction/*registered.h5"))
+    unique_id = "_".join(h5_file.name.split("_")[:-1])
+    output_dir = make_output_directory(output_dir, unique_id)
+
     frame_rate = args.frame_rate
 
     if frame_rate == 0:
-        processing_json_fp = h5_file.parent / "processing.json"
+        processing_json_fp = h5_file.parent / "data_process.json"
         with open(processing_json_fp, "r") as j:
             data = json.load(j)
-        try:
-            frame_rate = data["data_processes"][0]["parameters"]["movie_frame_rate_hz"]
-        except KeyError:
-            frame_rate =  data['processing_pipeline']['data_processes'][0]['parameters']['movie_frame_rate_hz']
+        frame_rate = data["parameters"]["movie_frame_rate_hz"]
+        
     with h5py.File(h5_file, "r") as h5_pointer:
         data_pointer = h5_pointer[dataset_name]
 
@@ -700,7 +694,9 @@ if __name__ == "__main__":  # pragma: nocover
     metrics = {}
     metrics["crops"] = args.crop
     metrics["shape"] = shape
-    metrics["percent_change_intensity"] = get_percent_change_intensity(start_section, end_section)
+    metrics["percent_change_intensity"] = get_percent_change_intensity(
+        start_section, end_section
+    )
     metrics["epilepsy_probability"], fig_epilespy = get_and_plot_epilepsy_probability(
         cropped_video, frame_rate=frame_rate
     )
@@ -737,7 +733,10 @@ if __name__ == "__main__":  # pragma: nocover
     )
 
     save_figure_to_storage(
-        plot_projection_image(start_section), output_dir, base_file, "start_projection_image"
+        plot_projection_image(start_section),
+        output_dir,
+        base_file,
+        "start_projection_image",
     )
 
     save_figure_to_storage(
@@ -755,17 +754,19 @@ if __name__ == "__main__":  # pragma: nocover
     metrics["all_rois_photons_per_rois_per_frame"] = convert_intensity_into_photon_flux(
         metrics["sum_rois_intensity"], metrics["photon_offset"], metrics["photon_gain"]
     )
-    metrics["all_neuropils_photons_per_rois_per_frame"] = convert_intensity_into_photon_flux(
-        metrics["sum_rois_neuropil"], metrics["photon_offset"], metrics["photon_gain"]
+    metrics["all_neuropils_photons_per_rois_per_frame"] = (
+        convert_intensity_into_photon_flux(
+            metrics["sum_rois_neuropil"], metrics["photon_offset"], metrics["photon_gain"]
+        )
     )
-
+    metrics["photon_offset"] = metrics["photon_offset"]
+    metrics["photon_gain"] = metrics["photon_gain"]
     metrics["mean_photons_per_roi_per_frame"] = np.mean(
         metrics["all_rois_photons_per_rois_per_frame"]
     )
-    metrics["std_photons_per_roi_per_frame"] = np.std(
-        metrics["all_rois_photons_per_rois_per_frame"]
-    )
-    metrics["mean_photons_per_roi_per_s"] = frame_rate * np.mean(
+    metrics["std_photons_per_roi_per_frame"] = np.std(metrics["all_rois_photons_per_rois_per_frame"])
+    metrics["mean_photons_per_roi_per_s"] = 
+        frame_rate * np.mean(
         metrics["all_rois_photons_per_rois_per_frame"]
     )
     metrics["std_photons_per_roi_per_s"] = frame_rate * np.std(
@@ -781,7 +782,9 @@ if __name__ == "__main__":  # pragma: nocover
     # Convert to dprime for spike detection
 
     # We first convert photons into photons per second
-    all_rois_photons_per_second = metrics["all_rois_photons_per_rois_per_frame"] * frame_rate
+    all_rois_photons_per_second = (
+        metrics["all_rois_photons_per_rois_per_frame"] * frame_rate
+    )
     all_neuropils_photons_per_second = (
         metrics["all_neuropils_photons_per_rois_per_frame"] * frame_rate
     )
@@ -797,7 +800,9 @@ if __name__ == "__main__":  # pragma: nocover
     metrics["std_rois_dprime"] = np.std(metrics["all_rois_dprime"])
 
     save_figure_to_storage(
-        plot_avg_intensity_progression(full_length_cropped_video, binning=full_length_binning),
+        plot_avg_intensity_progression(
+            full_length_cropped_video, binning=full_length_binning
+        ),
         output_dir,
         base_file,
         "physio_intensity_plot",
@@ -818,7 +823,7 @@ if __name__ == "__main__":  # pragma: nocover
         base_file,
         "physio_poisson_plot",
     )
-    
+
     # We remove stuff we don't need to save that would take space
     metrics.pop("mean")
     metrics.pop("var")
@@ -830,15 +835,6 @@ if __name__ == "__main__":  # pragma: nocover
     metrics.pop("sum_rois_neuropil")
     metrics.pop("all_neuropils_photons_per_rois_per_frame")
 
-    
     # We save the metrics to a json file
     with open(os.path.join(output_dir, base_file + "_metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
-    
-    write_output_metadata(
-        metrics,
-        str(h5_file),
-        os.path.join(output_dir, base_file + "_metrics.json"),
-        "https://github.com/AllenNeuralDynamics/aind-ophys-movie-qc",
-        start_time,
-    )

@@ -11,11 +11,6 @@ ARG GIT_ASKPASS
 ARG GIT_ACCESS_TOKEN
 COPY git-askpass /
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        vim=2:8.1.2269-1ubuntu5.21 \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN pip install -U --no-cache-dir \
     h5py==3.9.0 \
     matplotlib==3.8.0 \
