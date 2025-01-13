@@ -16,7 +16,6 @@ from scipy.stats import gaussian_kde
 from skimage import filters, measure
 
 
-
 def get_and_plot_epilepsy_probability(
     cropped_video, frame_rate, signal_threshold=10.0, min_width=0.1, max_width=0.3
 ):
@@ -649,7 +648,7 @@ if __name__ == "__main__":  # pragma: nocover
         with open(processing_json_fp, "r") as j:
             data = json.load(j)
         frame_rate = data["parameters"]["movie_frame_rate_hz"]
-        
+
     with h5py.File(h5_file, "r") as h5_pointer:
         data_pointer = h5_pointer[dataset_name]
 
@@ -764,9 +763,10 @@ if __name__ == "__main__":  # pragma: nocover
     metrics["mean_photons_per_roi_per_frame"] = np.mean(
         metrics["all_rois_photons_per_rois_per_frame"]
     )
-    metrics["std_photons_per_roi_per_frame"] = np.std(metrics["all_rois_photons_per_rois_per_frame"])
-    metrics["mean_photons_per_roi_per_s"] = 
-        frame_rate * np.mean(
+    metrics["std_photons_per_roi_per_frame"] = np.std(
+        metrics["all_rois_photons_per_rois_per_frame"]
+    )
+    metrics["mean_photons_per_roi_per_s"] = frame_rate * np.mean(
         metrics["all_rois_photons_per_rois_per_frame"]
     )
     metrics["std_photons_per_roi_per_s"] = frame_rate * np.std(
