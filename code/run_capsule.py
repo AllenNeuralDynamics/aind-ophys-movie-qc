@@ -644,7 +644,7 @@ if __name__ == "__main__":  # pragma: nocover
     frame_rate = args.frame_rate
 
     if frame_rate == 0:
-        processing_json_fp = h5_file.parent / "data_process.json"
+        processing_json_fp = next(h5_file.parent.glob("*data_process.json"))
         with open(processing_json_fp, "r") as j:
             data = json.load(j)
         frame_rate = data["parameters"]["movie_frame_rate_hz"]
