@@ -637,7 +637,7 @@ if __name__ == "__main__":  # pragma: nocover
     dataset_name = "data"
 
     output_dir = Path(args.output_dir)
-    h5_file = next(Path(args.input_dir).rglob("*/motion_correction/*registered.h5"))
+    h5_file = next(Path(args.input_dir).rglob("*registered.h5"))
     unique_id = "_".join(h5_file.name.split("_")[:-1])
     output_dir = make_output_directory(output_dir, unique_id)
 
