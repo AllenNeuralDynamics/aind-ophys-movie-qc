@@ -895,4 +895,4 @@ if __name__ == "__main__":  # pragma: nocover
     with open(os.path.join(output_dir, base_file + "_metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
 
-    write_qc_metrics()
+    write_qc_metrics(output_dir, unique_id)
