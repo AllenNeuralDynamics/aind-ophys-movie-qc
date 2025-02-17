@@ -20,4 +20,5 @@ RUN pip install -U --no-cache-dir \
     scikit-learn==1.3.1 \
     scipy==1.11.2 \
     aind-data-schema==1.1.1 \
-    pydantic==2.8.2
+    pydantic==2.8.2 \
+    aind-qcportal-schema
