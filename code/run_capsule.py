@@ -14,6 +14,62 @@ from scipy import ndimage
 from scipy.linalg import LinAlgError
 from scipy.stats import gaussian_kde
 from skimage import filters, measure
+from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status
+from aind_qcportal_schema.metric_value import DropdownMetric
+
+
+def write_qc_metrics(output_dir, unique_id):
+
+    metric = QCMetric(
+        name=f"{experiment_id} Epilepsy Probability",
+        description="",
+        reference=str(f"{experiment_id}/movie_qc/{experiment_id}_registered_epilepsy_probability.png"),
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)
+        ],
+        value=DropdownMetric(
+            value="Reasonable",
+            options=[
+                "Reasonable",
+                "Unreasonable",
+            ],
+            status=[
+                Status.PASS,
+                Status.FAIL,
+            ],
+        ),
+    )
+
+    with open(
+        output_dir / f"{experiment_id}_registered_epilepsy_probability_metric.json", "w"
+    ) as f:
+        json.dump(json.loads(metric.model_dump_json()), f, indent=4)
+
+    # physio_intensity metric
+    metric = QCMetric(
+        name=f"{experiment_id} Physio Intensity",
+        description="",
+        reference=str(f"{experiment_id}/movie_qc/{experiment_id}_registered_physio_intensity_plot.png"),
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)
+        ],
+        value=DropdownMetric(
+            value="Reasonable",
+            options=[
+                "Reasonable",
+                "Unreasonable",
+            ],
+            status=[
+                Status.PASS,
+                Status.FAIL,
+            ],
+        ),
+    )
+
+    with open(
+        output_dir / f"{experiment_id}_registered_physio_intensity_plot_metric.json", "w"
+    ) as f:
+        json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
 def get_and_plot_epilepsy_probability(
@@ -838,3 +894,5 @@ if __name__ == "__main__":  # pragma: nocover
     # We save the metrics to a json file
     with open(os.path.join(output_dir, base_file + "_metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
+
+    write_qc_metrics()
