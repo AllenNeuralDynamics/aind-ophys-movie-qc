@@ -21,9 +21,9 @@ from aind_qcportal_schema.metric_value import DropdownMetric
 def write_qc_metrics(output_dir, unique_id):
 
     metric = QCMetric(
-        name=f"{experiment_id} Epilepsy Probability",
+        name=f"{unique_id} Epilepsy Probability",
         description="",
-        reference=str(f"{experiment_id}/movie_qc/{experiment_id}_registered_epilepsy_probability.png"),
+        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_epilepsy_probability.png"),
         status_history=[
             QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)
         ],
@@ -41,15 +41,15 @@ def write_qc_metrics(output_dir, unique_id):
     )
 
     with open(
-        output_dir / f"{experiment_id}_registered_epilepsy_probability_metric.json", "w"
+        output_dir / f"{unique_id}_registered_epilepsy_probability_metric.json", "w"
     ) as f:
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
     # physio_intensity metric
     metric = QCMetric(
-        name=f"{experiment_id} Physio Intensity",
+        name=f"{unique_id} Physio Intensity",
         description="",
-        reference=str(f"{experiment_id}/movie_qc/{experiment_id}_registered_physio_intensity_plot.png"),
+        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"),
         status_history=[
             QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)
         ],
@@ -67,7 +67,7 @@ def write_qc_metrics(output_dir, unique_id):
     )
 
     with open(
-        output_dir / f"{experiment_id}_registered_physio_intensity_plot_metric.json", "w"
+        output_dir / f"{unique_id}_registered_physio_intensity_plot_metric.json", "w"
     ) as f:
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
