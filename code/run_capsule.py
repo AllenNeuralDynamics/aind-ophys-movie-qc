@@ -90,17 +90,33 @@ def write_qc_metrics(output_dir: Path, unique_id: str) -> None:
 
 
 def get_and_plot_epilepsy_probability(
-    cropped_video, frame_rate, signal_threshold=10.0, min_width=0.1, max_width=0.3
+    cropped_video: np.ndarray,
+    frame_rate: float,
+    signal_threshold: float = 10.0,
+    min_width: float = 0.1,
+    max_width: float = 0.3,
 ):
     """Get the probability of epilepsy in this physio movie.
 
-    Args:
-        signal_threshold:  A bound above which events are tagged as epileptic events
-        min_width, max_width:  Bounds on the widths within which events are tagged
-        as epileptic
+    Parameters:
+    -----------
+    cropped_video: np.ndarray
+        The video to analyze
+    frame_rate: float
+        Frames per second of the signal
+    signal_threshold: float
+        A bound above which events are tagged as epileptic events
+    min_width: float
+        Lower bound on the widths within which events are tagged as epileptic
+    max_width: float
+        Upper bound on the widths within which events are tagged as epileptic
 
-    Returns:
-        A float corresponding to the probability of epilepsy.
+
+    Returns
+    -------
+    float
+        the probability of epilepsy.
+    matplotlib.figure.Figure
         A figure showing the epilepsy plot.
     """
 
@@ -148,21 +164,35 @@ def get_and_plot_epilepsy_probability(
 
 
 def get_spike_prominence_and_width(
-    denoised_signal, spike_events, frame_rate, spike_threshold=0.05
+    denoised_signal: np.ndarray,
+    spike_events: np.ndarray,
+    frame_rate: float,
+    spike_threshold: float = 0.05,
 ):
     """Get the local prominence and width of each spike in a calcium trace.
 
     Local prominence is a measure of the strength of the spike relative to other spikes
     nearest to it.
 
-    Args:
-        denoised_signal:  The denoised fluorescence signal
-        spike_events:  Discretized deconvolved neural activity (spikes)
-        spike_threshold:  A float below which spikes will be thrown out
-        frame_rate:  Frames per second of the signal, used to convert width to seconds
-    Returns:
-        A tuple, (prominence array, width array)
+    Parameters
+    ----------
+    denoised_signal: np.ndarray
+        The denoised fluorescence signal
+    spike_events: np.ndarray
+        Discretized deconvolved neural activity (spikes)
+    frame_rate: float
+        Frames per second of the signal, used to convert width to seconds
+    spike_threshold: float
+        A bound below which spikes will be thrown out
+
+    Returns
+    -------
+    np.ndarray
+        An array of prominences
+    np.ndarray
+        An array of widths
     """
+
     event_idxs = np.where(spike_events > spike_threshold)[0]
     filtered_signal = denoised_signal[event_idxs]
 
@@ -224,15 +254,26 @@ def get_spike_prominence_and_width(
     return np.array(_prominences), np.array(_widths) / frame_rate
 
 
-def plot_intensity_histogram(cropped_video, min_range, max_range, log_scale=True):
+def plot_intensity_histogram(
+    cropped_video: np.ndarray, min_range: int, max_range: int, log_scale: bool = True
+):
     """Obtain a plot of the intensity histogram.
 
-    Args:
-        cropped_video:  The video to plot
-        min_range, max_range:  The range of values to include in the histogram
-        log_scale:  A boolean specifying whether or not to plot on a log scale
-    Returns:
-        A figure.
+    Parameters
+    ----------
+    cropped_video: np.ndarray
+        The video to plot
+    min_range: int
+        The minimum pixel value to consider
+    max_range: int
+        The maximum pixel value to consider
+    log_scale: bool
+        Whether to plot the histogram on a log scale
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        A figure showing the intensity histogram
     """
 
     fig = plt.figure()
@@ -251,7 +292,26 @@ def plot_intensity_histogram(cropped_video, min_range, max_range, log_scale=True
     return fig
 
 
-def plot_projection_image(cropped_video, min_range=1, max_range=99):
+def plot_projection_image(
+    cropped_video: np.ndarray, min_range: int = 1, max_range: int = 99
+):
+    """Create a projection image of the video.
+
+    Parameters
+    ----------
+    cropped_video: np.ndarray
+        The video to plot
+    min_range: int
+        The minimum pixel value to consider
+    max_range: int
+        The maximum pixel value to consider
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        A figure showing the projection image
+    """
+
     fig = plt.figure()
     image_project = np.mean(cropped_video, axis=0)
     list_pixel_limits = np.percentile(image_project.flatten(), [min_range, max_range])
@@ -263,8 +323,32 @@ def plot_projection_image(cropped_video, min_range=1, max_range=99):
 
 
 def get_and_plot_basic_segmentation(
-    cropped_video, min_object_size=100, max_object_size=300, sigma_segmentation=30
+    cropped_video: np.ndarray,
+    min_object_size: int = 100,
+    max_object_size: int = 300,
+    sigma_segmentation: int = 30,
 ):
+    """Get basic segmentation data and plot the results.
+
+    Parameters
+    ----------
+    cropped_video: np.ndarray
+        The video to analyze
+    min_object_size: int
+        The minimum size of an object to consider
+    max_object_size: int
+        The maximum size of an object to consider
+    sigma_segmentation: int
+        The sigma value to use in the segmentation
+
+    Returns
+    -------
+    dict
+        A dictionary of ROI data
+    matplotlib.figure.Figure
+        A figure showing the basic segmentation
+    """
+
     # We use a median to remove calcium events for F0
     background_image = np.median(cropped_video, axis=0)
 
@@ -323,7 +407,7 @@ def get_and_plot_basic_segmentation(
     return roi_data, figure
 
 
-def plot_poisson_curve(photon_gain_parameters):
+def plot_poisson_curve(photon_gain_parameters: dict) -> plt.Figure:
     """Obtain a plot showing Poisson characteristics of the signal.
 
     Args:
