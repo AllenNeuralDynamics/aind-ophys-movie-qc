@@ -408,12 +408,18 @@ def get_and_plot_basic_segmentation(
 
 
 def plot_poisson_curve(photon_gain_parameters: dict) -> plt.Figure:
-    """Obtain a plot showing Poisson characteristics of the signal.
+    """
+    Obtain a plot showing Poisson characteristics of the signal.
 
-    Args:
-        photon_gain_parameters:  A dictionary of parameters related to the photon gain
-    Returns:
-        A figure.
+    Parameters
+    ----------
+    photon_gain_parameters : dict
+        A dictionary of parameters related to the photon gain.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        A figure showing the Poisson characteristics of the signal.
     """
 
     h, xedges, yedges = np.histogram2d(
@@ -443,14 +449,23 @@ def plot_poisson_curve(photon_gain_parameters: dict) -> plt.Figure:
     return fig
 
 
-def plot_avg_intensity_progression(cropped_video, binning):
-    """Obtain a plot showing the average intensity over time.
+def plot_avg_intensity_progression(
+    cropped_video: np.ndarray, binning: int
+) -> plt.Figure:
+    """
+    Obtain a plot showing the average intensity over time.
 
-    Args:
-        cropped_video:  The video to plot
-        binning:  The amount of binning associated with cropped_video
-    Returns:
-        A figure.
+    Parameters
+    ----------
+    cropped_video : np.ndarray
+        The video to plot
+    binning : int
+        The amount of binning associated with cropped_video
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        A figure showing the average intensity progression.
     """
     fig = plt.figure()
 
@@ -465,14 +480,25 @@ def plot_avg_intensity_progression(cropped_video, binning):
     return fig
 
 
-def get_saturation_metrics(cropped_video, min_pixel_range, max_pixel_range):
-    """Return the number of pixels falling outside the usual dynamic range.
+def get_saturation_metrics(
+    cropped_video: np.ndarray, min_pixel_range: int, max_pixel_range: int
+) -> dict:
+    """
+    Return the number of pixels falling outside the usual dynamic range.
 
-    Args:
-        cropped_video:  The video to analyze
-        min_pixel_range, max_pixel_range:  The range of pixel values to consider
-    Returns:
-        An dictionary of saturation metrics.
+    Parameters
+    ----------
+    cropped_video : np.ndarray
+        The video to analyze
+    min_pixel_range : int
+        The minimum pixel value to consider
+    max_pixel_range : int
+        The maximum pixel value to consider
+
+    Returns
+    -------
+    dict
+        A dictionary of saturation metrics.
     """
     max_plane = cropped_video.max(axis=0).flatten()
     nb_saturated_pixels = int((max_plane >= max_pixel_range).sum())
@@ -492,12 +518,22 @@ def get_saturation_metrics(cropped_video, min_pixel_range, max_pixel_range):
     }
 
 
-def get_percent_change_intensity(start_section, end_section):
-    """Return the percent change in total intensity throughout the physio movie.
+def get_percent_change_intensity(
+    start_section: np.ndarray, end_section: np.ndarray
+) -> float:
+    """
+    Return the percent change in total intensity throughout the physio movie.
 
-    Args:
-        start_section, end_section:  The beginning and end of the movie to use
-    Returns:
+    Parameters
+    ----------
+    start_section : np.ndarray
+        The beginning section of the movie to use.
+    end_section : np.ndarray
+        The end section of the movie to use.
+
+    Returns
+    -------
+    float
         A float corresponding to the loss in total intensity as a percentage.
     """
     start_mean = np.mean(start_section, axis=(0, 1, 2))
@@ -507,14 +543,18 @@ def get_percent_change_intensity(start_section, end_section):
     return percent_change_intensity
 
 
-def get_simple_snr_metrics(cropped_video):
-    """SNR Metrics.
-
+def get_simple_snr_metrics(cropped_video: np.ndarray) -> dict:
+    """
     Compute metrics related to the signal to noise level for the images.
 
-    Args:
-        cropped_video:  The video to analyze
-    Returns:
+    Parameters
+    ----------
+    cropped_video : np.ndarray
+        The video to analyze
+
+    Returns
+    -------
+    dict
         A dictionary of metrics
     """
 
@@ -528,16 +568,24 @@ def get_simple_snr_metrics(cropped_video):
     }
 
 
-def get_percentile_metrics(cropped_video, perc_min, perc_max):
-    """Signal Percentiles.
-
+def get_percentile_metrics(
+    cropped_video: np.ndarray, perc_min: int, perc_max: int
+) -> dict:
+    """
     Compute metrics related to the range of the signal.
 
-    Args:
-        perc_min, perc_max:  Min and max values between 0-100 used in filtering
-        based on percentile
+    Parameters
+    ----------
+    cropped_video : np.ndarray
+        The video to analyze
+    perc_min : int
+        Minimum percentile value for filtering
+    perc_max : int
+        Maximum percentile value for filtering
 
-    Returns:
+    Returns
+    -------
+    dict
         A dictionary of percentile parameters.
     """
     return {
@@ -547,24 +595,36 @@ def get_percentile_metrics(cropped_video, perc_min, perc_max):
 
 
 def subsample_and_crop_video(
-    data_pointer, subsample, crop, start_frame=0, end_frame=-1
-):
-    """Subsample and crop a video, cache results. Also functions as a data_pointer load.
+    data_pointer: h5py._hl.dataset.Dataset | np.ndarray,
+    subsample: int,
+    crop: tuple[int, int],
+    start_frame: int = 0,
+    end_frame: int = -1,
+) -> np.ndarray:
+    """
+    Subsample and crop a video, cache results. Also functions as a data_pointer load.
 
-    Args:
-        subsample:  An integer specifying the amount of subsampling (1 = full movie)
-        crop:  A tuple (px_y, px_x) specifying the number of pixels to remove
-        start_frame:  The index of the first desired frame
-        end_frame:  The index of the last desired frame
+    Parameters
+    ----------
+    data_pointer : h5py._hl.dataset.Dataset or np.ndarray
+        The data pointer to the video data.
+    subsample : int
+        An integer specifying the amount of subsampling (1 = full movie).
+    crop : tuple[int, int]
+        A tuple (px_y, px_x) specifying the number of pixels to remove.
+    start_frame : int, optional
+        The index of the first desired frame, by default 0.
+    end_frame : int, optional
+        The index of the last desired frame, by default -1.
 
-    Returns:
+    Returns
+    -------
+    np.ndarray
         The resultant array.
     """
 
     if not isinstance(data_pointer, (h5py._hl.dataset.Dataset, np.ndarray)):
-        cropped_video = _subsample_and_crop_video_cv(
-            subsample, crop, start_frame=start_frame, end_frame=end_frame
-        )
+        raise NotImplementedError("Data pointer must be a h5py dataset or numpy array.")
     else:
         _shape = data_pointer.shape
         px_y_start, px_x_start = crop
@@ -585,76 +645,50 @@ def subsample_and_crop_video(
     return cropped_video
 
 
-def _subsample_and_crop_video_cv(self, subsample, crop, start_frame=0, end_frame=-1):
-    """Subsample and crop a cv2.VideoCapture video.
-
-    Args:
-        subsample: An integer specifying the amount of subsampling (1 = full movie)
-        crop: A tuple (px_y, px_x) specifying the number of pixels to remove
-        start_frame: The index of the first desired frame
-        end_frame: The index of the last desired frame or -1 for the last frame
-
-    Returns:
-        The resultant array.
+def convert_intensity_into_photon_flux(
+    intensities: np.ndarray, photon_offset: float, photon_gain: float
+) -> np.ndarray:
     """
-    import cv2
-    import numpy as np
+    Convert intensity values into photon flux.
 
-    # Capture video properties
-    total_frames = int(self.data_pointer.get(cv2.CAP_PROP_FRAME_COUNT))
-    height = int(self.data_pointer.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    width = int(self.data_pointer.get(cv2.CAP_PROP_FRAME_WIDTH))
-    px_y_start, px_x_start = crop
-    px_y_end = height - px_y_start
-    px_x_end = width - px_x_start
+    Parameters
+    ----------
+    intensities : np.ndarray
+        The intensity values to convert.
+    photon_offset : float
+        The offset value for the photon conversion.
+    photon_gain : float
+        The gain value for the photon conversion.
 
-    # Adjust frame indices if negative
-    start_frame = total_frames + start_frame if start_frame < 0 else start_frame
-    end_frame = (
-        total_frames
-        if end_frame == -1
-        else (total_frames + end_frame if end_frame < 0 else end_frame)
-    )
-
-    # Ensure frame range is within bounds
-    if (
-        not 0 <= start_frame < total_frames
-        or not start_frame < end_frame <= total_frames
-    ):
-        raise ValueError("Start or end frame out of video bounds.")
-
-    frames = []
-    self.data_pointer.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
-
-    for _ in range(start_frame, end_frame, subsample):
-        ret, frame = self.data_pointer.read()
-        if not ret:
-            raise ValueError(f"Unable to read frame at index {_}.")
-        frames.append(frame[px_y_start:px_y_end, px_x_start:px_x_end])
-
-    return np.array(frames)
-
-
-def convert_intensity_into_photon_flux(intensities, photon_offset, photon_gain):
+    Returns
+    -------
+    np.ndarray
+        The converted photon flux values.
+    """
     background_noise_mean = -photon_offset / photon_gain
     photon_flux = (intensities - background_noise_mean) / photon_gain
 
     return photon_flux
 
 
-def get_photon_gain_parameters(cropped_video, max_pixel_range, perc_min=3, perc_max=90):
+def get_photon_gain_parameters(
+    cropped_video: np.ndarray,
+    max_pixel_range: int,
+    perc_min: int = 3,
+    perc_max: int = 90,
+) -> dict:
     """Photon Gain.
 
     Compute a variety of parameters related to the physio signal's gain.
 
     Args:
-        cropped_video:  The video to analyze
-        max_pixel_range:  The maximum pixel value to consider
-        perc_min, perc_max:  Min and max values between 0-100 used in filtering
-        based on percentile
+        cropped_video (np.ndarray): The video to analyze.
+        max_pixel_range (int): The maximum pixel value to consider.
+        perc_min (int): Min value between 0-100 used in filtering based on percentile.
+        perc_max (int): Max value between 0-100 used in filtering based on percentile.
 
     Returns:
-        A dictionary of parameters related to the physio signal.
+        dict: A dictionary of parameters related to the physio signal.
         Useful in making plots and metrics.
     """
 
@@ -700,13 +734,35 @@ def get_photon_gain_parameters(cropped_video, max_pixel_range, perc_min=3, perc_
 
 
 def get_dprime_indicator(
-    baseline_photon_flux, neuropil_photon_flux, decay_time, dff_single_event_size
-):
-    """This original formula was introduced in Wilt et al, 2013
+    baseline_photon_flux: np.ndarray,
+    neuropil_photon_flux: np.ndarray,
+    decay_time: float,
+    dff_single_event_size: float,
+) -> np.ndarray:
+    """
+    Calculate the d-prime indicator for spike detection.
+
+    This original formula was introduced in Wilt et al, 2013.
     Default values of decay_time and dff_single_event_size are for Gcamp6f.
     We improved Wilt et al formula to correct for the presence of non-responsive
     background neuropil, assuming a fixed DF/F given by the indicator. Note that if
     neuropil is null we end up with dff_single_event_size as the correcting factor is 1.
+
+    Parameters
+    ----------
+    baseline_photon_flux : np.ndarray
+        The baseline photon flux values.
+    neuropil_photon_flux : np.ndarray
+        The neuropil photon flux values.
+    decay_time : float
+        The estimated 1/2 decay time of the event reporter (s).
+    dff_single_event_size : float
+        The estimated DF/F event size of the event reporter for single spikes (au).
+
+    Returns
+    -------
+    np.ndarray
+        The d-prime indicator values.
     """
     corrected_dff_single_event_size = (
         dff_single_event_size
@@ -721,17 +777,35 @@ def get_dprime_indicator(
     return d_prime
 
 
-def save_figure_to_storage(figure, storage_path, root_filename, image_name, dpi=120):
+def save_figure_to_storage(
+    figure: plt.Figure,
+    storage_path: Path,
+    root_filename: str,
+    image_name: str,
+    dpi: int = 120,
+) -> None:
     """Saves QC images to the file system.
 
-    Args:
+    Parameters
+    ----------
+    figure : matplotlib.figure.Figure
+        The figure to save.
+    storage_path : pathlib.Path
+        The directory where the figure will be saved.
+    root_filename : str
+        The root name of the file.
+    image_name : str
+        The name of the image.
+    dpi : int, optional
+        The resolution in dots per inch, by default 120.
 
-    Returns:
-        None
+    Returns
+    -------
+    None
     """
-    if not os.path.exists(storage_path):
-        os.makedirs(storage_path)
-    filepath = os.path.join(storage_path, "{}_{}.png".format(root_filename, image_name))
+    if not storage_path.exists():
+        storage_path.mkdir(parents=True)
+    filepath = storage_path / f"{root_filename}_{image_name}.png"
 
     figure.savefig(filepath, dpi=dpi)
     plt.close(figure)
