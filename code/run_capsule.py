@@ -1,5 +1,4 @@
 import argparse
-import glob
 import json
 import os
 from datetime import datetime as dt
@@ -9,6 +8,8 @@ import h5py
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
+from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status
+from aind_qcportal_schema.metric_value import DropdownMetric
 from oasis.functions import deconvolve as oasis_deconvolve
 from scipy import ndimage
 from scipy.linalg import LinAlgError
@@ -16,17 +17,106 @@ from scipy.stats import gaussian_kde
 from skimage import filters, measure
 
 
+def write_qc_metrics(output_dir: Path, unique_id: str) -> None:
+    """Write QC metrics to json file.
+
+    Parameters
+    ----------
+    output_dir: Path
+        output directory
+    unique_id: str
+        unique_id number
+
+    Returns
+    -------
+    None
+    """
+
+    # epilepsy_probability metric
+    metric = QCMetric(
+        name=f"{unique_id} Epilepsy Probability",
+        description="",
+        reference=str(
+            f"{unique_id}/movie_qc/{unique_id}_registered_epilepsy_probability.png"
+        ),
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)
+        ],
+        value=DropdownMetric(
+            value="Reasonable",
+            options=[
+                "Reasonable",
+                "Unreasonable",
+            ],
+            status=[
+                Status.PASS,
+                Status.FAIL,
+            ],
+        ),
+    )
+
+    with open(
+        output_dir / f"{unique_id}_registered_epilepsy_probability_metric.json", "w"
+    ) as f:
+        json.dump(json.loads(metric.model_dump_json()), f, indent=4)
+
+    # physio_intensity metric
+    metric = QCMetric(
+        name=f"{unique_id} Physio Intensity",
+        description="",
+        reference=str(
+            f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"
+        ),
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)
+        ],
+        value=DropdownMetric(
+            value="Reasonable",
+            options=[
+                "Reasonable",
+                "Unreasonable",
+            ],
+            status=[
+                Status.PASS,
+                Status.FAIL,
+            ],
+        ),
+    )
+
+    with open(
+        output_dir / f"{unique_id}_registered_physio_intensity_plot_metric.json", "w"
+    ) as f:
+        json.dump(json.loads(metric.model_dump_json()), f, indent=4)
+
+
 def get_and_plot_epilepsy_probability(
-    cropped_video, frame_rate, signal_threshold=10.0, min_width=0.1, max_width=0.3
+    cropped_video: np.ndarray,
+    frame_rate: float,
+    signal_threshold: float = 10.0,
+    min_width: float = 0.1,
+    max_width: float = 0.3,
 ):
     """Get the probability of epilepsy in this physio movie.
 
-    Args:
-        signal_threshold:  A bound above which events are tagged as epileptic events
-        min_width, max_width:  Bounds on the widths within which events are tagged as epileptic
+    Parameters:
+    -----------
+    cropped_video: np.ndarray
+        The video to analyze
+    frame_rate: float
+        Frames per second of the signal
+    signal_threshold: float
+        A bound above which events are tagged as epileptic events
+    min_width: float
+        Lower bound on the widths within which events are tagged as epileptic
+    max_width: float
+        Upper bound on the widths within which events are tagged as epileptic
 
-    Returns:
-        A float corresponding to the probability of epilepsy.
+
+    Returns
+    -------
+    float
+        the probability of epilepsy.
+    matplotlib.figure.Figure
         A figure showing the epilepsy plot.
     """
 
@@ -74,20 +164,35 @@ def get_and_plot_epilepsy_probability(
 
 
 def get_spike_prominence_and_width(
-    denoised_signal, spike_events, frame_rate, spike_threshold=0.05
+    denoised_signal: np.ndarray,
+    spike_events: np.ndarray,
+    frame_rate: float,
+    spike_threshold: float = 0.05,
 ):
     """Get the local prominence and width of each spike in a calcium trace.
 
-    Local prominence is a measure of the strength of the spike relative to other spikes nearest to it.
+    Local prominence is a measure of the strength of the spike relative to other spikes
+    nearest to it.
 
-    Args:
-        denoised_signal:  The denoised fluorescence signal
-        spike_events:  Discretized deconvolved neural activity (spikes)
-        spike_threshold:  A float below which spikes will be thrown out
-        frame_rate:  Frames per second of the signal, used to convert width to seconds
-    Returns:
-        A tuple, (prominence array, width array)
+    Parameters
+    ----------
+    denoised_signal: np.ndarray
+        The denoised fluorescence signal
+    spike_events: np.ndarray
+        Discretized deconvolved neural activity (spikes)
+    frame_rate: float
+        Frames per second of the signal, used to convert width to seconds
+    spike_threshold: float
+        A bound below which spikes will be thrown out
+
+    Returns
+    -------
+    np.ndarray
+        An array of prominences
+    np.ndarray
+        An array of widths
     """
+
     event_idxs = np.where(spike_events > spike_threshold)[0]
     filtered_signal = denoised_signal[event_idxs]
 
@@ -135,7 +240,9 @@ def get_spike_prominence_and_width(
         else:
             pre_half_idx = np.min(len(pre_spikes) - pre_half_idxs)
 
-        post_half_idxs = np.where(post_spikes < local_amplitude - local_prominence / 2)[0]
+        post_half_idxs = np.where(post_spikes < local_amplitude - local_prominence / 2)[
+            0
+        ]
         if not post_half_idxs.any():
             post_half_idx = len(post_spikes)
         else:
@@ -147,15 +254,26 @@ def get_spike_prominence_and_width(
     return np.array(_prominences), np.array(_widths) / frame_rate
 
 
-def plot_intensity_histogram(cropped_video, min_range, max_range, log_scale=True):
+def plot_intensity_histogram(
+    cropped_video: np.ndarray, min_range: int, max_range: int, log_scale: bool = True
+):
     """Obtain a plot of the intensity histogram.
 
-    Args:
-        cropped_video:  The video to plot
-        min_range, max_range:  The range of values to include in the histogram
-        log_scale:  A boolean specifying whether or not to plot on a log scale
-    Returns:
-        A figure.
+    Parameters
+    ----------
+    cropped_video: np.ndarray
+        The video to plot
+    min_range: int
+        The minimum pixel value to consider
+    max_range: int
+        The maximum pixel value to consider
+    log_scale: bool
+        Whether to plot the histogram on a log scale
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        A figure showing the intensity histogram
     """
 
     fig = plt.figure()
@@ -174,7 +292,26 @@ def plot_intensity_histogram(cropped_video, min_range, max_range, log_scale=True
     return fig
 
 
-def plot_projection_image(cropped_video, min_range=1, max_range=99):
+def plot_projection_image(
+    cropped_video: np.ndarray, min_range: int = 1, max_range: int = 99
+):
+    """Create a projection image of the video.
+
+    Parameters
+    ----------
+    cropped_video: np.ndarray
+        The video to plot
+    min_range: int
+        The minimum pixel value to consider
+    max_range: int
+        The maximum pixel value to consider
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        A figure showing the projection image
+    """
+
     fig = plt.figure()
     image_project = np.mean(cropped_video, axis=0)
     list_pixel_limits = np.percentile(image_project.flatten(), [min_range, max_range])
@@ -186,8 +323,32 @@ def plot_projection_image(cropped_video, min_range=1, max_range=99):
 
 
 def get_and_plot_basic_segmentation(
-    cropped_video, min_object_size=100, max_object_size=300, sigma_segmentation=30
+    cropped_video: np.ndarray,
+    min_object_size: int = 100,
+    max_object_size: int = 300,
+    sigma_segmentation: int = 30,
 ):
+    """Get basic segmentation data and plot the results.
+
+    Parameters
+    ----------
+    cropped_video: np.ndarray
+        The video to analyze
+    min_object_size: int
+        The minimum size of an object to consider
+    max_object_size: int
+        The maximum size of an object to consider
+    sigma_segmentation: int
+        The sigma value to use in the segmentation
+
+    Returns
+    -------
+    dict
+        A dictionary of ROI data
+    matplotlib.figure.Figure
+        A figure showing the basic segmentation
+    """
+
     # We use a median to remove calcium events for F0
     background_image = np.median(cropped_video, axis=0)
 
@@ -246,13 +407,19 @@ def get_and_plot_basic_segmentation(
     return roi_data, figure
 
 
-def plot_poisson_curve(photon_gain_parameters):
-    """Obtain a plot showing Poisson characteristics of the signal.
+def plot_poisson_curve(photon_gain_parameters: dict) -> plt.Figure:
+    """
+    Obtain a plot showing Poisson characteristics of the signal.
 
-    Args:
-        photon_gain_parameters:  A dictionary of parameters related to the photon gain
-    Returns:
-        A figure.
+    Parameters
+    ----------
+    photon_gain_parameters : dict
+        A dictionary of parameters related to the photon gain.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        A figure showing the Poisson characteristics of the signal.
     """
 
     h, xedges, yedges = np.histogram2d(
@@ -282,14 +449,23 @@ def plot_poisson_curve(photon_gain_parameters):
     return fig
 
 
-def plot_avg_intensity_progression(cropped_video, binning):
-    """Obtain a plot showing the average intensity over time.
+def plot_avg_intensity_progression(
+    cropped_video: np.ndarray, binning: int
+) -> plt.Figure:
+    """
+    Obtain a plot showing the average intensity over time.
 
-    Args:
-        cropped_video:  The video to plot
-        binning:  The amount of binning associated with cropped_video
-    Returns:
-        A figure.
+    Parameters
+    ----------
+    cropped_video : np.ndarray
+        The video to plot
+    binning : int
+        The amount of binning associated with cropped_video
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        A figure showing the average intensity progression.
     """
     fig = plt.figure()
 
@@ -304,14 +480,25 @@ def plot_avg_intensity_progression(cropped_video, binning):
     return fig
 
 
-def get_saturation_metrics(cropped_video, min_pixel_range, max_pixel_range):
-    """Return the number of pixels falling outside the usual dynamic range.
+def get_saturation_metrics(
+    cropped_video: np.ndarray, min_pixel_range: int, max_pixel_range: int
+) -> dict:
+    """
+    Return the number of pixels falling outside the usual dynamic range.
 
-    Args:
-        cropped_video:  The video to analyze
-        min_pixel_range, max_pixel_range:  The range of pixel values to consider
-    Returns:
-        An dictionary of saturation metrics.
+    Parameters
+    ----------
+    cropped_video : np.ndarray
+        The video to analyze
+    min_pixel_range : int
+        The minimum pixel value to consider
+    max_pixel_range : int
+        The maximum pixel value to consider
+
+    Returns
+    -------
+    dict
+        A dictionary of saturation metrics.
     """
     max_plane = cropped_video.max(axis=0).flatten()
     nb_saturated_pixels = int((max_plane >= max_pixel_range).sum())
@@ -319,7 +506,9 @@ def get_saturation_metrics(cropped_video, min_pixel_range, max_pixel_range):
     nb_undersat_pixels = (cropped_video.flatten() <= min_pixel_range).sum()
     nb_undersat_pixels = nb_undersat_pixels / float(cropped_video.shape[0])
     nb_undersat_pixels_perc = (
-        100 * nb_undersat_pixels / float(cropped_video.shape[1] * cropped_video.shape[2])
+        100
+        * nb_undersat_pixels
+        / float(cropped_video.shape[1] * cropped_video.shape[2])
     )
 
     return {
@@ -329,12 +518,22 @@ def get_saturation_metrics(cropped_video, min_pixel_range, max_pixel_range):
     }
 
 
-def get_percent_change_intensity(start_section, end_section):
-    """Return the percent change in total intensity throughout the physio movie.
+def get_percent_change_intensity(
+    start_section: np.ndarray, end_section: np.ndarray
+) -> float:
+    """
+    Return the percent change in total intensity throughout the physio movie.
 
-    Args:
-        start_section, end_section:  The beginning and end of the movie to use
-    Returns:
+    Parameters
+    ----------
+    start_section : np.ndarray
+        The beginning section of the movie to use.
+    end_section : np.ndarray
+        The end section of the movie to use.
+
+    Returns
+    -------
+    float
         A float corresponding to the loss in total intensity as a percentage.
     """
     start_mean = np.mean(start_section, axis=(0, 1, 2))
@@ -344,14 +543,18 @@ def get_percent_change_intensity(start_section, end_section):
     return percent_change_intensity
 
 
-def get_simple_snr_metrics(cropped_video):
-    """SNR Metrics.
-
+def get_simple_snr_metrics(cropped_video: np.ndarray) -> dict:
+    """
     Compute metrics related to the signal to noise level for the images.
 
-    Args:
-        cropped_video:  The video to analyze
-    Returns:
+    Parameters
+    ----------
+    cropped_video : np.ndarray
+        The video to analyze
+
+    Returns
+    -------
+    dict
         A dictionary of metrics
     """
 
@@ -365,14 +568,24 @@ def get_simple_snr_metrics(cropped_video):
     }
 
 
-def get_percentile_metrics(cropped_video, perc_min, perc_max):
-    """Signal Percentiles.
-
+def get_percentile_metrics(
+    cropped_video: np.ndarray, perc_min: int, perc_max: int
+) -> dict:
+    """
     Compute metrics related to the range of the signal.
 
-    Args:
-        perc_min, perc_max:  Min and max values between 0-100 used in filtering based on percentile
-    Returns:
+    Parameters
+    ----------
+    cropped_video : np.ndarray
+        The video to analyze
+    perc_min : int
+        Minimum percentile value for filtering
+    perc_max : int
+        Maximum percentile value for filtering
+
+    Returns
+    -------
+    dict
         A dictionary of percentile parameters.
     """
     return {
@@ -381,23 +594,37 @@ def get_percentile_metrics(cropped_video, perc_min, perc_max):
     }
 
 
-def subsample_and_crop_video(data_pointer, subsample, crop, start_frame=0, end_frame=-1):
-    """Subsample and crop a video, cache results. Also functions as a data_pointer load.
+def subsample_and_crop_video(
+    data_pointer: h5py._hl.dataset.Dataset | np.ndarray,
+    subsample: int,
+    crop: tuple[int, int],
+    start_frame: int = 0,
+    end_frame: int = -1,
+) -> np.ndarray:
+    """
+    Subsample and crop a video, cache results. Also functions as a data_pointer load.
 
-    Args:
-        subsample:  An integer specifying the amount of subsampling (1 = full movie)
-        crop:  A tuple (px_y, px_x) specifying the number of pixels to remove
-        start_frame:  The index of the first desired frame
-        end_frame:  The index of the last desired frame
+    Parameters
+    ----------
+    data_pointer : h5py._hl.dataset.Dataset or np.ndarray
+        The data pointer to the video data.
+    subsample : int
+        An integer specifying the amount of subsampling (1 = full movie).
+    crop : tuple[int, int]
+        A tuple (px_y, px_x) specifying the number of pixels to remove.
+    start_frame : int, optional
+        The index of the first desired frame, by default 0.
+    end_frame : int, optional
+        The index of the last desired frame, by default -1.
 
-    Returns:
+    Returns
+    -------
+    np.ndarray
         The resultant array.
     """
 
     if not isinstance(data_pointer, (h5py._hl.dataset.Dataset, np.ndarray)):
-        cropped_video = _subsample_and_crop_video_cv(
-            subsample, crop, start_frame=start_frame, end_frame=end_frame
-        )
+        raise NotImplementedError("Data pointer must be a h5py dataset or numpy array.")
     else:
         _shape = data_pointer.shape
         px_y_start, px_x_start = crop
@@ -410,31 +637,59 @@ def subsample_and_crop_video(data_pointer, subsample, crop, start_frame=0, end_f
             ]
         else:
             cropped_video = data_pointer[
-                start_frame:end_frame:subsample, px_y_start:px_y_end, px_x_start:px_x_end
+                start_frame:end_frame:subsample,
+                px_y_start:px_y_end,
+                px_x_start:px_x_end,
             ]
 
     return cropped_video
 
 
-def convert_intensity_into_photon_flux(intensities, photon_offset, photon_gain):
+def convert_intensity_into_photon_flux(
+    intensities: np.ndarray, photon_offset: float, photon_gain: float
+) -> np.ndarray:
+    """
+    Convert intensity values into photon flux.
+
+    Parameters
+    ----------
+    intensities : np.ndarray
+        The intensity values to convert.
+    photon_offset : float
+        The offset value for the photon conversion.
+    photon_gain : float
+        The gain value for the photon conversion.
+
+    Returns
+    -------
+    np.ndarray
+        The converted photon flux values.
+    """
     background_noise_mean = -photon_offset / photon_gain
     photon_flux = (intensities - background_noise_mean) / photon_gain
 
     return photon_flux
 
 
-def get_photon_gain_parameters(cropped_video, max_pixel_range, perc_min=3, perc_max=90):
+def get_photon_gain_parameters(
+    cropped_video: np.ndarray,
+    max_pixel_range: int,
+    perc_min: int = 3,
+    perc_max: int = 90,
+) -> dict:
     """Photon Gain.
 
     Compute a variety of parameters related to the physio signal's gain.
 
     Args:
-        cropped_video:  The video to analyze
-        max_pixel_range:  The maximum pixel value to consider
-        perc_min, perc_max:  Min and max values between 0-100 used in filtering based on percentile
+        cropped_video (np.ndarray): The video to analyze.
+        max_pixel_range (int): The maximum pixel value to consider.
+        perc_min (int): Min value between 0-100 used in filtering based on percentile.
+        perc_max (int): Max value between 0-100 used in filtering based on percentile.
 
     Returns:
-        A dictionary of parameters related to the physio signal.  Useful in making plots and metrics.
+        dict: A dictionary of parameters related to the physio signal.
+        Useful in making plots and metrics.
     """
 
     # Remove saturated pixels
@@ -479,11 +734,35 @@ def get_photon_gain_parameters(cropped_video, max_pixel_range, perc_min=3, perc_
 
 
 def get_dprime_indicator(
-    baseline_photon_flux, neuropil_photon_flux, decay_time, dff_single_event_size
-):
-    """This original formula was introduced in Wilt et al, 2013
+    baseline_photon_flux: np.ndarray,
+    neuropil_photon_flux: np.ndarray,
+    decay_time: float,
+    dff_single_event_size: float,
+) -> np.ndarray:
+    """
+    Calculate the d-prime indicator for spike detection.
+
+    This original formula was introduced in Wilt et al, 2013.
     Default values of decay_time and dff_single_event_size are for Gcamp6f.
-    We improved Wilt et al formula to correct for the presence of non-responsive background neuropil, assuming a fixed DF/F given by the indicator. Note that if neuropil is null we end up with dff_single_event_size as the correcting factor is 1.
+    We improved Wilt et al formula to correct for the presence of non-responsive
+    background neuropil, assuming a fixed DF/F given by the indicator. Note that if
+    neuropil is null we end up with dff_single_event_size as the correcting factor is 1.
+
+    Parameters
+    ----------
+    baseline_photon_flux : np.ndarray
+        The baseline photon flux values.
+    neuropil_photon_flux : np.ndarray
+        The neuropil photon flux values.
+    decay_time : float
+        The estimated 1/2 decay time of the event reporter (s).
+    dff_single_event_size : float
+        The estimated DF/F event size of the event reporter for single spikes (au).
+
+    Returns
+    -------
+    np.ndarray
+        The d-prime indicator values.
     """
     corrected_dff_single_event_size = (
         dff_single_event_size
@@ -498,17 +777,35 @@ def get_dprime_indicator(
     return d_prime
 
 
-def save_figure_to_storage(figure, storage_path, root_filename, image_name, dpi=120):
+def save_figure_to_storage(
+    figure: plt.Figure,
+    storage_path: Path,
+    root_filename: str,
+    image_name: str,
+    dpi: int = 120,
+) -> None:
     """Saves QC images to the file system.
 
-    Args:
+    Parameters
+    ----------
+    figure : matplotlib.figure.Figure
+        The figure to save.
+    storage_path : pathlib.Path
+        The directory where the figure will be saved.
+    root_filename : str
+        The root name of the file.
+    image_name : str
+        The name of the image.
+    dpi : int, optional
+        The resolution in dots per inch, by default 120.
 
-    Returns:
-        None
+    Returns
+    -------
+    None
     """
-    if not os.path.exists(storage_path):
-        os.makedirs(storage_path)
-    filepath = os.path.join(storage_path, "{}_{}.png".format(root_filename, image_name))
+    if not storage_path.exists():
+        storage_path.mkdir(parents=True)
+    filepath = storage_path / f"{root_filename}_{image_name}.png"
 
     figure.savefig(filepath, dpi=dpi)
     plt.close(figure)
@@ -578,7 +875,8 @@ def parse_args() -> argparse.Namespace:
         type=list,
         default=(30, 30),
         help=(
-            "cropped area of movie to use for analysis. Useful to remove" " edge effects"
+            "cropped area of movie to use for analysis. Useful to remove"
+            " edge effects"
         ),
     )
 
@@ -617,7 +915,8 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.15,
         help=(
-            "This is the estimated DF/F event size of your event reporter for single spikes (au)."
+            "This is the estimated DF/F event size of your event"
+            " reporter for single spikes (au)."
         ),
     )
 
@@ -671,7 +970,8 @@ if __name__ == "__main__":  # pragma: nocover
             end_frame=-1,
         )
 
-        # We extract a few frames from the beginning and end of the movie to use for stability metrics
+        # We extract a few frames from the beginning and end of the movie
+        # to use for stability metrics
         ignore_frames = 300
         nb_border_frames_to_avg = 200
         start_section = subsample_and_crop_video(
@@ -707,7 +1007,8 @@ if __name__ == "__main__":  # pragma: nocover
 
     save_figure_to_storage(fig_epilespy, output_dir, base_file, "epilepsy_probability")
 
-    # The following add the dictionary returned by get_simple_snr_metrics to the metrics dictionary
+    # The following add the dictionary returned by
+    # get_simple_snr_metrics to the metrics dictionary
     metrics.update(get_simple_snr_metrics(cropped_video))
 
     photon_gain_parameters = get_photon_gain_parameters(
@@ -739,12 +1040,17 @@ if __name__ == "__main__":  # pragma: nocover
     )
 
     save_figure_to_storage(
-        plot_projection_image(end_section), output_dir, base_file, "end_projection_image"
+        plot_projection_image(end_section),
+        output_dir,
+        base_file,
+        "end_projection_image",
     )
 
     rois_data, roi_figure = get_and_plot_basic_segmentation(start_section)
 
-    save_figure_to_storage(roi_figure, output_dir, base_file, "basic_segmentation_image")
+    save_figure_to_storage(
+        roi_figure, output_dir, base_file, "basic_segmentation_image"
+    )
 
     metrics.update(rois_data)
     metrics.update(photon_gain_parameters)
@@ -755,7 +1061,9 @@ if __name__ == "__main__":  # pragma: nocover
     )
     metrics["all_neuropils_photons_per_rois_per_frame"] = (
         convert_intensity_into_photon_flux(
-            metrics["sum_rois_neuropil"], metrics["photon_offset"], metrics["photon_gain"]
+            metrics["sum_rois_neuropil"],
+            metrics["photon_offset"],
+            metrics["photon_gain"],
         )
     )
     metrics["photon_offset"] = metrics["photon_offset"]
@@ -810,7 +1118,9 @@ if __name__ == "__main__":  # pragma: nocover
 
     save_figure_to_storage(
         plot_intensity_histogram(
-            cropped_video, min_range=args.min_pixel_range, max_range=args.max_pixel_range
+            cropped_video,
+            min_range=args.min_pixel_range,
+            max_range=args.max_pixel_range,
         ),
         output_dir,
         base_file,
@@ -838,3 +1148,5 @@ if __name__ == "__main__":  # pragma: nocover
     # We save the metrics to a json file
     with open(os.path.join(output_dir, base_file + "_metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
+
+    write_qc_metrics(output_dir, unique_id)
