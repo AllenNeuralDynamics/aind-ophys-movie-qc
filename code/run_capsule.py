@@ -3,6 +3,7 @@ import json
 import os
 from datetime import datetime as dt
 from pathlib import Path
+from typing import Union
 
 import h5py
 import matplotlib.patches as patches
@@ -240,9 +241,7 @@ def get_spike_prominence_and_width(
         else:
             pre_half_idx = np.min(len(pre_spikes) - pre_half_idxs)
 
-        post_half_idxs = np.where(post_spikes < local_amplitude - local_prominence / 2)[
-            0
-        ]
+        post_half_idxs = np.where(post_spikes < local_amplitude - local_prominence / 2)[0]
         if not post_half_idxs.any():
             post_half_idx = len(post_spikes)
         else:
@@ -449,9 +448,7 @@ def plot_poisson_curve(photon_gain_parameters: dict) -> plt.Figure:
     return fig
 
 
-def plot_avg_intensity_progression(
-    cropped_video: np.ndarray, binning: int
-) -> plt.Figure:
+def plot_avg_intensity_progression(cropped_video: np.ndarray, binning: int) -> plt.Figure:
     """
     Obtain a plot showing the average intensity over time.
 
@@ -506,9 +503,7 @@ def get_saturation_metrics(
     nb_undersat_pixels = (cropped_video.flatten() <= min_pixel_range).sum()
     nb_undersat_pixels = nb_undersat_pixels / float(cropped_video.shape[0])
     nb_undersat_pixels_perc = (
-        100
-        * nb_undersat_pixels
-        / float(cropped_video.shape[1] * cropped_video.shape[2])
+        100 * nb_undersat_pixels / float(cropped_video.shape[1] * cropped_video.shape[2])
     )
 
     return {
@@ -595,7 +590,7 @@ def get_percentile_metrics(
 
 
 def subsample_and_crop_video(
-    data_pointer: h5py._hl.dataset.Dataset | np.ndarray,
+    data_pointer: Union[h5py._hl.dataset.Dataset, np.ndarray],
     subsample: int,
     crop: tuple[int, int],
     start_frame: int = 0,
@@ -875,8 +870,7 @@ def parse_args() -> argparse.Namespace:
         type=list,
         default=(30, 30),
         help=(
-            "cropped area of movie to use for analysis. Useful to remove"
-            " edge effects"
+            "cropped area of movie to use for analysis. Useful to remove" " edge effects"
         ),
     )
 
@@ -1048,9 +1042,7 @@ if __name__ == "__main__":  # pragma: nocover
 
     rois_data, roi_figure = get_and_plot_basic_segmentation(start_section)
 
-    save_figure_to_storage(
-        roi_figure, output_dir, base_file, "basic_segmentation_image"
-    )
+    save_figure_to_storage(roi_figure, output_dir, base_file, "basic_segmentation_image")
 
     metrics.update(rois_data)
     metrics.update(photon_gain_parameters)
