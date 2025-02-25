@@ -15,6 +15,7 @@ from scipy import ndimage
 from scipy.linalg import LinAlgError
 from scipy.stats import gaussian_kde
 from skimage import filters, measure
+from typing import Union
 
 
 def write_qc_metrics(output_dir: Path, unique_id: str) -> None:
@@ -595,7 +596,7 @@ def get_percentile_metrics(
 
 
 def subsample_and_crop_video(
-    data_pointer: h5py._hl.dataset.Dataset | np.ndarray,
+    data_pointer: Union[h5py._hl.dataset.Dataset, np.ndarray],
     subsample: int,
     crop: tuple[int, int],
     start_frame: int = 0,
