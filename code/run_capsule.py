@@ -4,6 +4,7 @@ import os
 from datetime import datetime as dt
 from pathlib import Path
 from typing import Union
+import sys
 
 import h5py
 import matplotlib.patches as patches
@@ -930,7 +931,9 @@ if __name__ == "__main__":  # pragma: nocover
     dataset_name = "data"
 
     output_dir = Path(args.output_dir)
-    h5_file = next(Path(args.input_dir).rglob("*registered.h5"))
+    h5_file = next(Path(args.input_dir).rglob("*registered.h5"), "")
+    if not h5_file:
+        sys.exit()
     unique_id = "_".join(h5_file.name.split("_")[:-1])
     output_dir = make_output_directory(output_dir, unique_id)
 
