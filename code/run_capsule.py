@@ -18,6 +18,7 @@ from scipy.linalg import LinAlgError
 from scipy.stats import gaussian_kde
 from skimage import filters, measure
 
+from local_z_stack import LocalZStack
 
 def save_qc_metric_to_file(metric: QCMetric, output_dir: Path, filename: str) -> None:
     """Save a QC metric to a JSON file.
@@ -372,6 +373,9 @@ def write_qc_metrics(output_dir: Path, unique_id: str, metrics: dict) -> None:
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
     )
     save_qc_metric_to_file(metric, output_dir, f"{unique_id}_roi_dprime_std_metric")
+
+    # z-drift metrics
+
 
 
 def get_and_plot_epilepsy_probability(
@@ -1409,6 +1413,15 @@ if __name__ == "__main__":  # pragma: nocover
         base_file,
         "physio_poisson_plot",
     )
+    
+    # z-drift metrics
+    session_json_path = next(h5_file.parent.parent.glob('session.json'))
+    local_zstack = LocalZstack(zstack_filepath=zstack_filepath,
+                               physio_filepath=h5_file,
+                               session_json_path=session_json_path)
+    metrics["zdrift"] = local_zstack.get_z_drift() #TODO: expose parameters
+    
+
 
     # We remove stuff we don't need to save that would take space
     metrics.pop("mean")
