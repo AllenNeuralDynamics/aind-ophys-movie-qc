@@ -375,7 +375,23 @@ def write_qc_metrics(output_dir: Path, unique_id: str, metrics: dict) -> None:
     save_qc_metric_to_file(metric, output_dir, f"{unique_id}_roi_dprime_std_metric")
 
     # z-drift metrics
-
+    zdrift = metrics.get("zdrift", 0.0)
+    if zdrift == 0:
+        zdrift_status = Status.PENDING
+    else:
+        zdrift_um = zdrift['z_drift_um']
+        if zdrift_um <= 10:  # Low drift
+            zdrift_status = Status.PASS
+        else:
+            zdrift_status = Status.FAIL
+        
+    metric = QCMetric(
+        name=f"{unique_id} Mean Photons per ROI per Frame",
+        description="Mean number of photons per ROI per frame",
+        value=float(mean_photons_per_roi),
+        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=zdrift_status)],
+    )
+    save_qc_metric_to_file(metric, output_dir, f"{unique_id}_mean_photons_per_roi_per_frame_metric")
 
 
 def get_and_plot_epilepsy_probability(
@@ -1420,7 +1436,7 @@ if __name__ == "__main__":  # pragma: nocover
                                physio_filepath=h5_file,
                                session_json_path=session_json_path)
     metrics["zdrift"] = local_zstack.get_z_drift() #TODO: expose parameters
-    
+
 
 
     # We remove stuff we don't need to save that would take space
