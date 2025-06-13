@@ -1576,13 +1576,16 @@ if __name__ == "__main__":  # pragma: nocover
     )
     
     # z-drift metrics
+
+    """
     print(h5_file)
     session_json_path = next(h5_file.parent.parent.parent.glob('session.json'))
-    local_zstack = LocalZstack(zstack_filepath=zstack_filepath,
+    zstack_filepath= next(h5_file.parent.parent.parent.glob('session.json'))
+    local_zstack = LocalZStack(zstack_filepath=zstack_filepath,
                                physio_filepath=h5_file,
                                session_json_path=session_json_path)
     metrics["zdrift"] = local_zstack.get_z_drift() #TODO: expose parameters
-
+    """
 
 
     # We remove stuff we don't need to save that would take space
