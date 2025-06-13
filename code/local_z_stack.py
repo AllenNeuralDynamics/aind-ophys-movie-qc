@@ -5,13 +5,9 @@ import h5py
 import scipy.ndimage
 from skimage.metrics import structural_similarity as ssim
 from skimage.registration import phase_cross_correlation
+import matplotlib.pyplot as plt
 
-from mindscope_qc_metrics.exceptions import DataAcquisitionError, DataMissingError
-from mindscope_qc_metrics.plotting import plt
-from mindscope_qc_metrics.utils import rigs, util, logger
-
-
-class LocalZStack():
+class LocalZStack:
     """Local Z Stack
 
     Objects contain methods to generate QC metrics from the local z stack files
@@ -369,7 +365,7 @@ class LocalZStack():
             raise NotImplementedError('Unhandled fov scale factor unit {}'.format(session_json['data_streams'][0]['ophys_fov'][0]["fov_scale_factor_unit"]))
 
         if self.meta.nb_of_loops * self.meta.nb_of_planes != self.meta.data_shape[0]:
-            raise DataAcquisitionError('Number of frames in local z stack different from metadata')
+            raise Exception('Number of frames in local z stack different from metadata')
 
 
     # def _calculate_qc_images(self):
