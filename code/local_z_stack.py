@@ -7,7 +7,7 @@ from skimage.metrics import structural_similarity as ssim
 from skimage.registration import phase_cross_correlation
 import matplotlib.pyplot as plt
 
-class LocalZStack():
+class LocalZStack:
     """Local Z Stack
 
     Objects contain methods to generate QC metrics from the local z stack files
