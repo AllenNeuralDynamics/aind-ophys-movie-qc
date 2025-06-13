@@ -10,7 +10,6 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status, QCEvaluation, Modality, Stage
-from aind_qcportal_schema.metric_value import DropdownMetric
 from oasis.functions import deconvolve as oasis_deconvolve
 
 from scipy import ndimage
@@ -103,12 +102,9 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         description="Automated assessment of epileptic activity probability",
         reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_epilepsy_probability.png"),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=epilepsy_status)],
-        value=DropdownMetric(
-            value=epilepsy_prob,
-            status=[Status.PASS, Status.FAIL],
-        ),
+        value=float(epilepsy_prob), 
     )
-    
+
     epilepsy_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
@@ -1338,10 +1334,7 @@ def write_legacy_movie_qc_metrics(output_dir: Path, unique_id: str, metrics: dic
         description="Automated assessment of epileptic activity probability",
         reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_epilepsy_probability.png"),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=epilepsy_status)],
-        value=DropdownMetric(
-            value=epilepsy_prob,
-            status=[Status.PASS, Status.FAIL],
-        ),
+        value=float(epilepsy_prob)
     )
     save_qc_metric_to_file(metric, output_dir, f"{unique_id}_registered_epilepsy_probability_metric")
 
@@ -1608,4 +1601,5 @@ if __name__ == "__main__":  # pragma: nocover
     # LEGACY: Keep only the 2 specific metrics needed by aggregator for backward compatibility
     # These are the ones currently recognized by the aggregator's create_movie_qc_evaluations function
     write_legacy_movie_qc_metrics(output_dir, unique_id, metrics)
+
 
