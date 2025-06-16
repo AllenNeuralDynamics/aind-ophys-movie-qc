@@ -6,6 +6,8 @@ import scipy.ndimage
 from skimage.metrics import structural_similarity as ssim
 from skimage.registration import phase_cross_correlation
 import matplotlib.pyplot as plt
+import json
+from pathlib import Path
 
 class LocalZStack:
     """Local Z Stack
@@ -34,6 +36,7 @@ class LocalZStack:
         self.physio_filepath = physio_filepath
         self.session_json_path = session_json_path
 
+        self.meta = {}
         self.local_zstack_metadata()
         self.zstack = self.process_stack()
         
@@ -49,11 +52,11 @@ class LocalZStack:
         """
         z_drift_corr = self.get_z_drift(gaussian_filter=True, use_meta=True, save_images=True, metric='corr')
         self.metrics = {
-            'shape': self.meta.data_shape,
+            'shape': self.meta['data_shape'],
             'z_drift_corr_start_frame': z_drift_corr['start_frame'],
             'z_drift_corr_end_frame': z_drift_corr['end_frame'],
             'z_drift_corr_frame_diff': z_drift_corr['end_frame'] - z_drift_corr['start_frame'],
-            'z_drift_corr_um_diff': (z_drift_corr['end_frame'] - z_drift_corr['start_frame']) * self.meta.z_spacing_um,
+            'z_drift_corr_um_diff': (z_drift_corr['end_frame'] - z_drift_corr['start_frame']) * self.meta['z_spacing_um'],
             'z_drift_start_frame_match_method': 'algorithm',
             'z_drift_end_frame_match_method': 'algorithm',
             'filepath': self.physio_filepath
@@ -72,7 +75,7 @@ class LocalZStack:
                 'z_drift_ssim_start_frame': z_drift_ssim['start_frame'],
                 'z_drift_ssim_end_frame': z_drift_ssim['end_frame'],
                 'z_drift_ssim_frame_diff': z_drift_ssim['end_frame'] - z_drift_ssim['start_frame'],
-                'z_drift_ssim_um_diff': (z_drift_ssim['end_frame'] - z_drift_ssim['start_frame']) * self.meta.z_spacing_um,
+                'z_drift_ssim_um_diff': (z_drift_ssim['end_frame'] - z_drift_ssim['start_frame']) * self.meta['z_spacing_um'],
                 'z_drift_start_frame_match_method': 'algorithm',
                 'z_drift_end_frame_match_method': 'algorithm'
             })
@@ -86,14 +89,14 @@ class LocalZStack:
         #TODO: Need to correct for motion.
 
         Returns:
-            An array of shape (self.meta.nb_of_planes - (ignore_top + ignore_bot), Y, X)
+            An array of shape (self.meta['nb_of_planes'] - (ignore_top + ignore_bot), Y, X)
         """
         stack = []
         with h5py.File(self.zstack_filepath, 'r') as f:
             local_z_stack = f["data"][()]
-            for plane_ind in range(self.meta.nb_of_planes):
+            for plane_ind in range(self.meta['nb_of_planes']):
                 single_plane_images = local_z_stack[range(
-                    plane_ind, self.meta.data_shape[0], elf.meta.nb_of_planes), ...]
+                    plane_ind, self.meta['data_shape'][0], self.meta['nb_of_planes']), ...]
                 stack.append(np.mean(single_plane_images, axis=0))
         stack = np.array(stack)
 
@@ -188,7 +191,7 @@ class LocalZStack:
         else:
             raise NotImplementedError('Unhandled z-drift metric type {}'.format(metric))
 
-        z_spacing = self.meta.z_spacing_um
+        z_spacing = self.meta['z_spacing_um']
 
         fig = plt.figure()
         plt.plot(np.arange(0, len(start_coefs)) * z_spacing,
@@ -306,7 +309,7 @@ class LocalZStack:
             'start_frame': start_idx,
             'end_frame': end_idx,
             'z_drift_frame': end_idx - start_idx,
-            'z_drift_um': (end_idx - start_idx) * self.meta.z_spacing_um}
+            'z_drift_um': (end_idx - start_idx) * self.meta['z_spacing_um']}
         z_drift_metrics.update(correlation_scores)
 
         # if save_images:
@@ -330,7 +333,7 @@ class LocalZStack:
 
     def local_zstack_metadata(self):
         """Get scanimage metadata and ROI groups from a local z-stack
-        and save to self.meta.
+        and save to self.meta
 
         """
         zstack_path = Path(self.zstack_filepath)
@@ -340,31 +343,30 @@ class LocalZStack:
             si = f["scanimage_metadata"][()]
         si = si.decode()
         si = json.loads(si)
-        scanimage_metadata = si[0]
+        si_metadata = si[0]
         roi_groups = si[1]
 
-        scanimage_metadata, roi_groups = self.local_zstack_metadata(self.zstack_filepath)
         nb_of_loops = int(si_metadata['SI.hStackManager.actualNumVolumes'])
         nb_of_planes = int(si_metadata['SI.hStackManager.actualNumSlices'])
         z_spacing_um = float(si_metadata['SI.hStackManager.actualStackZStepSize'])
-        with h5py.File(zstack_filepath, 'r') as f:
+        with h5py.File(zstack_path, 'r') as f:
             local_zstack_shape = f['data'].shape
 
-        self.meta.nb_of_loops = nb_of_loops
-        self.meta.nb_of_planes = nb_of_planes
-        self.meta.z_spacing_um = z_spacing_um
-        self.meta.total_z_distance = (self.meta.nb_of_planes - 1) * self.meta.z_spacing_um
-        self.meta.data_shape = local_zstack_shape
+        self.meta['nb_of_loops'] = nb_of_loops
+        self.meta['nb_of_planes'] = nb_of_planes
+        self.meta['z_spacing_um'] = z_spacing_um
+        self.meta['total_z_distance'] = (self.meta['nb_of_planes'] - 1) * self.meta['z_spacing_um']
+        self.meta['data_shape'] = local_zstack_shape
 
         with open(self.session_json_path, 'r') as f:
             session_json = json.load(f)
-        xy_scale = int(session_json['data_streams'][0]['ophys_fov'][0]['fov_scale_factor'])
-        if session_json['data_streams'][0]['ophys_fov'][0]["fov_scale_factor_unit"] == "um/pixel":
-            self.meta.fov_scale_factor = xy_scale
+        xy_scale = float(session_json['data_streams'][0]['ophys_fovs'][0]['fov_scale_factor'])
+        if session_json['data_streams'][0]['ophys_fovs'][0]["fov_scale_factor_unit"] == "um/pixel":
+            self.meta['fov_scale_factor'] = xy_scale
         else:
-            raise NotImplementedError('Unhandled fov scale factor unit {}'.format(session_json['data_streams'][0]['ophys_fov'][0]["fov_scale_factor_unit"]))
+            raise NotImplementedError('Unhandled fov scale factor unit {}'.format(session_json['data_streams'][0]['ophys_fovs'][0]["fov_scale_factor_unit"]))
 
-        if self.meta.nb_of_loops * self.meta.nb_of_planes != self.meta.data_shape[0]:
+        if self.meta['nb_of_loops'] * self.meta['nb_of_planes'] != self.meta['data_shape'][0]:
             raise Exception('Number of frames in local z stack different from metadata')
 
 
