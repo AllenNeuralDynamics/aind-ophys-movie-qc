@@ -1625,8 +1625,10 @@ if __name__ == "__main__":  # pragma: nocover
     )
     
     # z-drift metrics
-    session_json_path = next(h5_file.parent.parent.parent.glob('session.json'))
-    zstack_filepath = next(h5_file.parent.parent.glob('*_z_stack_local.h5'))
+    # session_json_path = next(h5_file.parent.parent.parent.glob('session.json'))
+    session_json_path = next(Path(args.input_dir).rglob("session.json"))
+    # zstack_filepath = next(h5_file.parent.parent.glob('*_z_stack_local.h5'))
+    zstack_filepath = next(Path(args.input_dir).rglob('*_z_stack_local.h5'))
     local_zstack = LocalZStack(zstack_filepath=zstack_filepath,
                                physio_filepath=h5_file,
                                session_json_path=session_json_path)
