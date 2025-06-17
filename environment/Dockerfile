@@ -27,10 +27,3 @@ RUN cd /.code-server \
     && rm code-server.tar.gz \
     && ln -s /.code-server/code-server-4.95.3-linux-amd64/bin/code-server  /usr/bin/code-server
 
-RUN mkdir -p /.vscode/extensions \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension REditorSupport.R \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension continue.continue \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension ms-python.python \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension ms-toolsai.jupyter \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension reageyao.bioSyntax \
-    && code-server --extensions-dir="/.vscode/extensions" --install-extension saoudrizwan.claude-dev
