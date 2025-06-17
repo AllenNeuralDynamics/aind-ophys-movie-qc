@@ -105,9 +105,7 @@ class LocalZStack:
 
     def _input_process(self, input_image, gaussian_filter=False, sigma=3, shift=(0, 0)):
         """Processes the local z stack and the input image.
-        # Note: may not be used.
-
-        Z-stack is cropped, shifted, and blurred.  Input image is blurred.
+         Z-stack is cropped, shifted, and blurred.  Input image is blurred.
 
         Args:
             input_image:  2D array to compare to the local z stack planes
@@ -131,26 +129,32 @@ class LocalZStack:
             input_image_shape = input_image.shape
             assert zstack_shape[1] == input_image_shape[0] and zstack_shape[2] == input_image_shape[1], \
                 'Z stack shape {} does not match input image shape {}'.format(zstack_shape, input_image_shape)
-            shape = zstack_shape[1:3]
-            if shift[0] < 0:
-                y_range_input = slice(0, shift[0])
-                y_range_zstack = slice(-shift[0], shape[0])
-            else:
-                y_range_input = slice(shift[0], shape[0])
-                y_range_zstack = slice(0, shape[0] - shift[0])
-            if shift[1] < 0:
-                x_range_input = slice(0, shift[1])
-                x_range_zstack = slice(-shift[1], shape[1])
-            else:
-                x_range_input = slice(shift[1], shape[1])
-                x_range_zstack = slice(0, shape[1] - shift[1])
-            z_stack = z_stack[:, y_range_zstack, x_range_zstack]
-            input_image = input_image[y_range_input, x_range_input]
+            y_range_input, x_range_input, y_range_zstack, x_range_zstack = self._range_from_shift(shift)
+            z_stack = z_stack[:, y_range_zstack[0] : y_range_zstack[1], x_range_zstack[0] : x_range_zstack[1]]
+            input_image = input_image[y_range_input[0] : y_range_input[1], x_range_input[0] : x_range_input[1]]
 
         return z_stack, input_image
     
 
-    def _get_shift(self, register):
+    def _range_from_shift(self, shift):
+        """Returns the range of pixels to crop from the images and z stack based on the shift.
+        Args:
+            shift: A tuple denoting (px_y, px_x) the number of pixels to shift.
+
+        Returns:
+            Tuples y_range_input, x_range_input, y_range_zstack, x_range_zstack
+                each tuple contains the start and end pixel indices for cropping.
+        """
+        shape = self.meta['data_shape']
+
+        y_range_input = (max(0, -shift[0]), shape[0] - max(0, shift[0]))
+        x_range_input = (max(0, -shift[1]), shape[1] - max(0, shift[1]))
+        y_range_zstack = (max(0, shift[0]), shift[0] if shift[0] < 0 else shape[0])
+        x_range_zstack = (max(0, shift[1]), shift[1] if shift[1] < 0 else shape[1])
+        return y_range_input, x_range_input, y_range_zstack, x_range_zstack
+
+
+    def _get_shift(self, register, image):
         if register:
             # Register start image to z projected stack
             if hasattr(self, 'register_shift'):
@@ -158,15 +162,15 @@ class LocalZStack:
             else:
                 stack = self.process_stack()
                 stack_projection = np.max(stack, axis=0)
-                shift_xy, _, _ = phase_cross_correlation(stack_projection, start_image)
-                shift = (shift_xy[0], shift_xy[1])
+                shift_xy, _, _ = phase_cross_correlation(stack_projection, image)
+                shift = (int(shift_xy[0]), int(shift_xy[1]))
                 self.register_shift = shift
         else:
             shift = (0, 0)
         return shift
 
 
-    def plot_z_drift_scores(self, start_image, end_image, gaussian_filter=False, sigma=3, 
+    def plot_z_drift_scores(self, start_image, end_image, gaussian_filter=True, sigma=3, 
                             register=True, metric='corr'):
         """Generate a score vs. depth plot for a given z-drift metric.
 
@@ -180,7 +184,7 @@ class LocalZStack:
         Returns:
             A figure.
         """
-        shift = self._get_shift(register=register)
+        shift = self._get_shift(register=register, image=start_image)
 
         if metric == 'corr':
             start_coefs = self.get_corr_z_planes(start_image, gaussian_filter=gaussian_filter, sigma=sigma, shift=shift)
@@ -212,7 +216,7 @@ class LocalZStack:
         return fig
         
 
-    def get_corr_z_planes(self, input_image, gaussian_filter=False, sigma=3, shift=(0, 0), ignore_top=5, ignore_bot=5):
+    def get_corr_z_planes(self, input_image, gaussian_filter=True, sigma=3, shift=(0, 0), ignore_top=5, ignore_bot=5):
         """Compares input_image to each z-plane of the local z stack. Returns correlation coefficients.
 
         Args:
@@ -268,7 +272,7 @@ class LocalZStack:
     def get_z_drift(self, nb_frames_to_avg=500, gaussian_filter=True, sigma=3,
                     register=True, metric='corr'):
         """Determine the amount of z-drift in the motion corrected physio movie..
-        # Note: This code assumes stable motion. 
+        # Note: This code assumes stable motion during z-stack imaging. 
 
         Args:
             nb_frames_to_avg:  Number of frames to average in the physio movie
@@ -280,13 +284,15 @@ class LocalZStack:
 
         Returns:
             A dict of z-drift information.
+            A dict of of images to save.
+                All with shifts applied. (vmin and vmax to be calculated during imshow)
         """
         
         with h5py.File(self.physio_filepath, 'r') as f:
             start_image = f['data'][:nb_frames_to_avg, ...].mean(axis=0)
             end_image = f['data'][-(nb_frames_to_avg+1):, ...].mean(axis=0)
         
-        shift = self._get_shift(register=register)
+        shift = self._get_shift(register=register, image=start_image)
 
         correlation_scores = {}
         if metric == 'corr':
@@ -309,26 +315,20 @@ class LocalZStack:
             'start_frame': start_idx,
             'end_frame': end_idx,
             'z_drift_frame': end_idx - start_idx,
-            'z_drift_um': (end_idx - start_idx) * self.meta['z_spacing_um']}
+            'z_drift_um': (end_idx - start_idx) * self.meta['z_spacing_um'],
+            'start_corr': start_corr,
+            'end_corr': end_corr,}
         z_drift_metrics.update(correlation_scores)
 
-        # if save_images:
-        #     self.save_image_to_storage(scipy.ndimage.shift(start_image, shift), 'motion_corr_physio_start', self.ophys_experiment.lims_id)
-        #     self.save_image_to_storage(scipy.ndimage.shift(end_image, shift), 'motion_corr_physio_end', self.ophys_experiment.lims_id)
+        y_range_input, x_range_input, y_range_zstack, x_range_zstack = self._range_from_shift(shift)
 
-        #     _score_fig = self.plot_z_drift_scores(start_image, end_image, crop=crop, gaussian_filter=gaussian_filter, sigma=sigma, shift=shift, metric=metric)
-        #     self.save_image_to_storage(_score_fig, '{}_z_drift_score_plot'.format(metric), self.ophys_experiment.lims_id)
-
-        #     stack = self.process_stack()
-        #     _shape = stack.shape
-        #     px_y_start, px_x_start = crop
-        #     px_y_end = _shape[1] - px_y_start
-        #     px_x_end = _shape[2] - px_x_start
-        #     stack = stack[:, px_y_start:px_y_end, px_x_start:px_x_end]
-        #     self.save_image_to_storage(stack[start_idx], 'local_z_stack_start_match_{}'.format(metric), self.ophys_experiment.lims_id)
-        #     self.save_image_to_storage(stack[end_idx], 'local_z_stack_end_match_{}'.format(metric), self.ophys_experiment.lims_id)
+        save_imgs = {}
+        save_imgs['start_image'] = start_image[y_range_input[0]:y_range_input[1], x_range_input[0]:x_range_input[1]]
+        save_imgs['end_image'] = end_image[y_range_input[0]:y_range_input[1], x_range_input[0]:x_range_input[1]]
+        save_imgs['start_zstack_plane'] = self.zstack[start_idx, y_range_zstack[0]:y_range_zstack[1], x_range_zstack[0]:x_range_zstack[1]]
+        save_imgs['end_zstack_plane'] = self.zstack[end_idx, y_range_zstack[0]:y_range_zstack[1], x_range_zstack[0]:x_range_zstack[1]]
             
-        return z_drift_metrics
+        return z_drift_metrics, save_imgs
 
 
     def local_zstack_metadata(self):
@@ -368,39 +368,3 @@ class LocalZStack:
 
         if self.meta['nb_of_loops'] * self.meta['nb_of_planes'] != self.meta['data_shape'][0]:
             raise Exception('Number of frames in local z stack different from metadata')
-
-
-    # def _calculate_qc_images(self):
-    #     """Calculates QC images and saves to the parameter self.metrics
-
-    #     Returns:
-    #         None
-    #     """
-    #     self._calculate_qc_metrics() # Most local z stack images saved as part of metric calculation process
-
-    #     stack = self.zstack
-    #     self.save_image_to_storage(stack[0],
-    #                                'local_z_stack_top',
-    #                                self.unique_id)
-    #     self.save_image_to_storage(stack[int(self.meta.nb_of_planes / 2)],
-    #                                'local_z_stack_mid',
-    #                                self.unique_id)
-    #     self.save_image_to_storage(stack[self.meta.nb_of_planes - 1],
-    #                                'local_z_stack_bot',
-    #                                self.ounique_id)
-
-    #     xz_aspect = (self.meta.total_z_distance / len(stack)) * (stack.shape[1] / self.meta.fov_size_scale)
-    #     yz_aspect = (self.meta.total_z_distance / len(stack)) * (stack.shape[2] / self.meta.fov_size_scale)
-    #     self.save_image_to_storage(self.plot_array(np.mean(stack, axis=1), xlabel='X', ylabel='Z', aspect=xz_aspect, is_image=True),
-    #                                'local_z_stack_xz_plot',
-    #                                self.unique_id)
-    #     self.save_image_to_storage(self.plot_array(np.mean(stack, axis=2), xlabel='Y', ylabel='Z', aspect=yz_aspect, is_image=True),
-    #                                'local_z_stack_yz_plot',
-    #                                self.unique_id)
-    #     self.save_image_to_storage(self.plot_array(np.mean(stack, axis=(1,2)), xlabel='Plane #', ylabel='Average Intensity'),
-    #                                'local_z_stack_intensity_plot',
-    #                                self.unique_id)
-
-    #     self.save_video_to_storage(self.zstack.astype('uint16'),
-    #                                'local_z_stack',
-    #                                self.unique_id)
