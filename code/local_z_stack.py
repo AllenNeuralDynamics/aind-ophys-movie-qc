@@ -39,6 +39,7 @@ class LocalZStack:
         self.meta = {}
         self.local_zstack_metadata()
         self.zstack = self.process_stack()
+        self.register_shift = None  # Initialize register_shift
         
         self.images = {}
         self.dataset_name = 'local_z_stack'
@@ -50,7 +51,7 @@ class LocalZStack:
         Returns:
             None
         """
-        z_drift_corr = self.get_z_drift(gaussian_filter=True, use_meta=True, save_images=True, metric='corr')
+        z_drift_corr = self.get_z_drift(gaussian_filter=True, metric='corr')
         self.metrics = {
             'shape': self.meta['data_shape'],
             'z_drift_corr_start_frame': z_drift_corr['start_frame'],
@@ -70,7 +71,7 @@ class LocalZStack:
 
 
         try:
-            z_drift_ssim = self.get_z_drift(gaussian_filter=True, sigma=5, use_meta=True, save_images=True, metric='ssim')
+            z_drift_ssim = self.get_z_drift(gaussian_filter=True, sigma=5, metric='ssim')
             self.metrics.update({
                 'z_drift_ssim_start_frame': z_drift_ssim['start_frame'],
                 'z_drift_ssim_end_frame': z_drift_ssim['end_frame'],
@@ -289,8 +290,8 @@ class LocalZStack:
         """
         
         with h5py.File(self.physio_filepath, 'r') as f:
-            start_image = f['data'][:nb_frames_to_avg, ...].mean(axis=0)
-            end_image = f['data'][-(nb_frames_to_avg+1):, ...].mean(axis=0)
+            start_image = np.array(f['data'][:nb_frames_to_avg, ...]).mean(axis=0)
+            end_image = np.array(f['data'][-(nb_frames_to_avg+1):, ...]).mean(axis=0)
         
         shift = self._get_shift(register=register, image=start_image)
 
@@ -350,7 +351,10 @@ class LocalZStack:
         nb_of_planes = int(si_metadata['SI.hStackManager.actualNumSlices'])
         z_spacing_um = float(si_metadata['SI.hStackManager.actualStackZStepSize'])
         with h5py.File(zstack_path, 'r') as f:
-            local_zstack_shape = f['data'].shape
+            if isinstance(f['data'], h5py.Dataset):
+                local_zstack_shape = f['data'].shape
+            else:
+                raise ValueError("'data' is not a dataset in the HDF5 file")
 
         self.meta['nb_of_loops'] = nb_of_loops
         self.meta['nb_of_planes'] = nb_of_planes
