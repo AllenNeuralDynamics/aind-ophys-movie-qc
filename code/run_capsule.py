@@ -524,7 +524,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         metrics=zdrift_metrics
     )
 
-    save_qc_metric_to_file(zdrift_evaluation, output_dir, f"{unique_id}_z_drift")
+    save_qc_evaluation_to_file(zdrift_evaluation, output_dir, f"{unique_id}_z_drift")
 
 
 def get_and_plot_epilepsy_probability(
