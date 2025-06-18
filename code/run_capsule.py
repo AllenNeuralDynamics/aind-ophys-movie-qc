@@ -492,25 +492,25 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         QCMetric(
             name=f'{unique_id} start correlation - peak',
             description="Peak of the correlation between the start image and the local z-stack frames",
-            value=np.asarray(zdrift['start_frame_corr']),
+            value=zdrift['start_frame_corr'],
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
             name=f'{unique_id} end correlation - peak',
             description="Peak of the correlation between the end image and the local z-stack frames",
-            value=np.asarray(zdrift['end_frame_corr']),
+            value=zdrift['end_frame_corr'],
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
             name=f'{unique_id} start correlation',
             description="Correlation between the start image and the local z-stack frames",
-            value=np.asarray(zdrift['start_corr']),
+            value=zdrift['start_corr'],
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
             name=f'{unique_id} end correlation',
             description="Correlation between the end image and the local z-stack frames",
-            value=np.asarray(zdrift['end_corr']),
+            value=zdrift['end_corr'],
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         )
     ])
@@ -1107,7 +1107,7 @@ def get_photon_gain_parameters(
     cropped_video: np.ndarray,
     max_pixel_range: int,
     perc_min: int = 3,
-    perc_max: int = 90,
+    perc_max: int = 90
 ) -> dict:
     """Photon Gain.
 
@@ -1627,6 +1627,7 @@ if __name__ == "__main__":  # pragma: nocover
     # z-drift metrics
     # session_json_path = next(h5_file.parent.parent.parent.glob('session.json'))
     session_json_path = next(Path(args.input_dir).rglob("session.json"))
+    print(session_json_path)
     # zstack_filepath = next(h5_file.parent.parent.glob('*_z_stack_local.h5'))
     zstack_filepath = next(Path(args.input_dir).rglob(f'{unique_id}_z_stack_local.h5'))
     local_zstack = LocalZStack(zstack_filepath=zstack_filepath,
@@ -1635,11 +1636,14 @@ if __name__ == "__main__":  # pragma: nocover
     metrics["zdrift"], save_imgs = local_zstack.get_z_drift() #TODO: expose parameters
 
     for img_name, img in save_imgs.items():
+        fig, ax = plt.subplots()
+        ax.imshow(img, cmap='gray', vmin=np.percentile(img.flatten(), 1), vmax=np.percentile(img.flatten(), 99))
         save_figure_to_storage(
-            img,
+            fig,
             output_dir,
             base_file,
             f"zdrift_{img_name}",
+            dpi=300
         )
 
     # We remove stuff we don't need to save that would take space
