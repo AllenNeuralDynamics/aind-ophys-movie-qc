@@ -39,7 +39,6 @@ class LocalZStack:
         self.meta = {}
         self.local_zstack_metadata()
         self.zstack = self.process_stack()
-        self.register_shift = None  # Initialize register_shift
         
         self.images = {}
         self.dataset_name = 'local_z_stack'
@@ -146,12 +145,12 @@ class LocalZStack:
             Tuples y_range_input, x_range_input, y_range_zstack, x_range_zstack
                 each tuple contains the start and end pixel indices for cropping.
         """
-        shape = self.meta['data_shape']
+        _, y, x = self.meta['data_shape']
 
-        y_range_input = (max(0, -shift[0]), shape[0] - max(0, shift[0]))
-        x_range_input = (max(0, -shift[1]), shape[1] - max(0, shift[1]))
-        y_range_zstack = (max(0, shift[0]), shift[0] if shift[0] < 0 else shape[0])
-        x_range_zstack = (max(0, shift[1]), shift[1] if shift[1] < 0 else shape[1])
+        y_range_input = (max(0, -shift[0]), y - max(0, shift[0]))
+        x_range_input = (max(0, -shift[1]), x - max(0, shift[1]))
+        y_range_zstack = (max(0, shift[0]), shift[0] if shift[0] < 0 else y)
+        x_range_zstack = (max(0, shift[1]), shift[1] if shift[1] < 0 else x)
         return y_range_input, x_range_input, y_range_zstack, x_range_zstack
 
 
@@ -317,8 +316,8 @@ class LocalZStack:
             'end_frame': end_idx,
             'z_drift_frame': end_idx - start_idx,
             'z_drift_um': (end_idx - start_idx) * self.meta['z_spacing_um'],
-            'start_corr': start_corr,
-            'end_corr': end_corr,}
+            'start_corr': start_corr.tolist(),
+            'end_corr': end_corr.tolist(),}
         z_drift_metrics.update(correlation_scores)
 
         y_range_input, x_range_input, y_range_zstack, x_range_zstack = self._range_from_shift(shift)
