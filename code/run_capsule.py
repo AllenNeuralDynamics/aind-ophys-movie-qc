@@ -35,7 +35,7 @@ def save_qc_evaluation_to_file(evaluation: QCEvaluation, output_dir: Path, filen
     None
     """
     
-    filepath = output_dir / f"{filename}_aggregate.json"
+    filepath = output_dir / f"{filename}_evaluation.json"
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(json.loads(evaluation.model_dump_json()), f, indent=4)
 
@@ -475,12 +475,14 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
             name=f'{unique_id} start_frame in local z-stack',
             description="# of frame in local z-stack matched to the start of the movie",
             value=int(zdrift['start_frame']),
+            reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift_start.png"),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
             name=f'{unique_id} end_frame in local z-stack',
             description="# of frame in local z-stack matched to the end of the movie",
             value=int(zdrift['end_frame']),
+            reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift_end.png"),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
@@ -1632,14 +1634,22 @@ if __name__ == "__main__":  # pragma: nocover
                                session_json_path=session_json_path)
     metrics["zdrift"], save_imgs = local_zstack.get_z_drift() #TODO: expose parameters
 
-    for img_name, img in save_imgs.items():
-        fig, ax = plt.subplots()
-        ax.imshow(img, cmap='gray', vmin=np.percentile(img.flatten(), 1), vmax=np.percentile(img.flatten(), 99))
+    image_segments = ['start', 'end']
+    image_types = ['image', 'zstack_plane']
+    for image_segment in image_segments:
+        fig, axes = plt.subplots(1, 2, figsize=(12,5))
+        for i, image_type in enumerate(image_types):
+            key = f'{image_segment}_{image_type}'
+            img = save_imgs[key]
+            axes[i].imshow(img, cmap='gray',
+                            vmin=np.percentile(img.flatten(), 1),
+                            vmax=np.percentile(img.flatten(), 99))
+            axes[i].set_title(key)
         save_figure_to_storage(
             fig,
             output_dir,
             base_file,
-            f"zdrift_{img_name}",
+            f"zdrift_{image_segment}",
             dpi=300
         )
 

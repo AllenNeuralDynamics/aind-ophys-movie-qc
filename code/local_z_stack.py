@@ -50,7 +50,7 @@ class LocalZStack:
         Returns:
             None
         """
-        z_drift_corr = self.get_z_drift(gaussian_filter=True, metric='corr')
+        z_drift_corr, _ = self.get_z_drift(gaussian_filter=True, metric='corr')
         self.metrics = {
             'shape': self.meta['data_shape'],
             'z_drift_corr_start_frame': z_drift_corr['start_frame'],
@@ -70,7 +70,7 @@ class LocalZStack:
 
 
         try:
-            z_drift_ssim = self.get_z_drift(gaussian_filter=True, sigma=5, metric='ssim')
+            z_drift_ssim, _ = self.get_z_drift(gaussian_filter=True, sigma=5, metric='ssim')
             self.metrics.update({
                 'z_drift_ssim_start_frame': z_drift_ssim['start_frame'],
                 'z_drift_ssim_end_frame': z_drift_ssim['end_frame'],
