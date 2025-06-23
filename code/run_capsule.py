@@ -4,6 +4,7 @@ import os
 from datetime import datetime as dt
 from pathlib import Path
 from typing import Union
+import shutil
 
 import h5py
 import matplotlib.patches as patches
@@ -1652,6 +1653,13 @@ if __name__ == "__main__":  # pragma: nocover
             f"zdrift_{image_segment}",
             dpi=300
         )
+    
+    # save z-stack files (both raw and registered)
+    zstack_save_filepath = Path(args.output_dir) / zstack_filepath.name
+    shutil.copy(str(zstack_filepath), str(zstack_save_filepath))
+    zstack_reg_save_filepath = Path(args.output_dir) / f'{zstack_filepath.stem}_reg.h5'
+    with h5py.File(zstack_reg_save_filepath, 'w') as h:
+        h.create_dataset('data', data=local_zstack.zstack)
 
     # We remove stuff we don't need to save that would take space
     metrics.pop("mean")
