@@ -1655,9 +1655,9 @@ if __name__ == "__main__":  # pragma: nocover
         )
     
     # save z-stack files (both raw and registered)
-    zstack_save_filepath = Path(args.output_dir) / zstack_filepath.name
+    zstack_save_filepath = Path(args.output_dir) / unique_id / zstack_filepath.name
     shutil.copy(str(zstack_filepath), str(zstack_save_filepath))
-    zstack_reg_save_filepath = Path(args.output_dir) / f'{zstack_filepath.stem}_reg.h5'
+    zstack_reg_save_filepath = Path(args.output_dir) / f'{unique_id}/{zstack_filepath.stem}_reg.h5'
     with h5py.File(zstack_reg_save_filepath, 'w') as h:
         h.create_dataset('data', data=local_zstack.zstack)
 
