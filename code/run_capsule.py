@@ -75,7 +75,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         status = Status.PASS
         
     intensity_metric = QCMetric(
-        name=f"{unique_id} Intensity Change",
+        name="Intensity Change",
         description="Percent change in intensity from start to end of movie",
         reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"),
         value=float(intensity_change)
@@ -84,7 +84,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     intensity_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} Intensity Change",
+        name="Intensity Change",
         description="Analysis of intensity changes throughout the movie",
         allow_failed_metrics=False,
         metrics=[intensity_metric]
@@ -99,7 +99,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         epilepsy_status = Status.PASS
         
     epilepsy_metric = QCMetric(
-        name=f"{unique_id} Epilepsy Probability",
+        name="Epilepsy Probability",
         description="Automated assessment of epileptic activity probability",
         reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_epilepsy_probability.png"),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=epilepsy_status)],
@@ -109,7 +109,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     epilepsy_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} Epilepsy Probability",
+        name="Epilepsy Probability",
         description="Detection of potential epileptic activity in the recording",
         allow_failed_metrics=False,
         metrics=[epilepsy_metric]
@@ -122,7 +122,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     snr_mean = metrics.get("simple_snr_mean", 0.0)
         
     snr_metrics.append(QCMetric(
-        name=f"{unique_id} SNR Mean",
+        name="SNR Mean",
         description="Mean signal-to-noise ratio across frames",
         value=float(snr_mean),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
@@ -131,14 +131,14 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     snr_median = metrics.get("simple_snr_med", 0.0)
         
     snr_metrics.append(QCMetric(
-        name=f"{unique_id} SNR Median",
+        name="SNR Median",
         description="Median signal-to-noise ratio across frames",
         value=float(snr_median),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
     ))
 
     snr_metrics.append(QCMetric(
-        name=f"{unique_id} SNR Standard Deviation",
+        name="SNR Standard Deviation",
         description="Standard deviation of signal-to-noise ratio across frames",
         value=float(metrics.get("simple_snr_std", 0.0)),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
@@ -147,7 +147,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     snr_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} SNR Analysis",
+        name="SNR Analysis",
         description="Signal-to-noise ratio metrics for image quality assessment",
         allow_failed_metrics=False,
         metrics=snr_metrics
@@ -164,7 +164,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         sat_status = Status.PASS
         
     saturated_metric = QCMetric(
-        name=f"{unique_id} Saturated Pixels",
+        name="Saturated Pixels",
         description="Number of saturated pixels in the movie",
         value=int(saturated_pixels),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=sat_status)],
@@ -173,7 +173,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     saturated_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} Saturated Pixels",
+        name="Saturated Pixels",
         description="Analysis of pixel saturation in the recording",
         allow_failed_metrics=False,
         metrics=[saturated_metric]
@@ -185,7 +185,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     
     low_pixels = metrics.get("nb_low_pixels", 0)
     low_intensity_metrics.append(QCMetric(
-        name=f"{unique_id} Low Intensity Pixels",
+        name="Low Intensity Pixels",
         description="Number of pixels with low intensity values",
         value=int(low_pixels),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
@@ -194,7 +194,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     low_pixels_perc = metrics.get("nb_low_pixels_perc", 0.0)
 
     low_intensity_metrics.append(QCMetric(
-        name=f"{unique_id} Low Intensity Pixels Percentage",
+        name="Low Intensity Pixels Percentage",
         description="Percentage of pixels with low intensity values",
         value=float(low_pixels_perc),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
@@ -203,7 +203,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     low_intensity_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} Low Intensity Pixels",
+        name="Low Intensity Pixels",
         description="Analysis of low intensity pixels in the recording",
         allow_failed_metrics=False,
         metrics=low_intensity_metrics
@@ -214,14 +214,14 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     percentile_metrics = []
     
     percentile_metrics.append(QCMetric(
-        name=f"{unique_id} Intensity Percentile Lower",
+        name="Intensity Percentile Lower",
         description="Lower percentile (5th) of pixel intensities",
         value=float(metrics.get("percentile_lower", 0.0)),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
     ))
 
     percentile_metrics.append(QCMetric(
-        name=f"{unique_id} Intensity Percentile Upper",
+        name="Intensity Percentile Upper",
         description="Upper percentile (95th) of pixel intensities",
         value=float(metrics.get("percentile_upper", 0.0)),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
@@ -230,7 +230,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     percentile_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} Intensity Percentiles",
+        name="Intensity Percentiles",
         description="Statistical analysis of pixel intensity distribution",
         allow_failed_metrics=False,
         metrics=percentile_metrics
@@ -249,7 +249,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         roi_status = Status.PASS
         
     roi_metrics.append(QCMetric(
-        name=f"{unique_id} Number of ROIs",
+        name="Number of ROIs",
         description="Number of regions of interest detected by segmentation",
         value=int(nb_rois),
         reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_basic_segmentation_image.png"),
@@ -258,31 +258,31 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
 
     roi_metrics.extend([
         QCMetric(
-            name=f"{unique_id} Mean ROI Intensity",
+            name="Mean ROI Intensity",
             description="Mean intensity across all detected ROIs",
             value=float(metrics.get("mean_rois_intensity", 0.0)),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f"{unique_id} ROI Intensity Standard Deviation",
+            name="ROI Intensity Standard Deviation",
             description="Standard deviation of intensities across ROIs",
             value=float(metrics.get("std_rois_intensity", 0.0)),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f"{unique_id} ROI Segmentation Threshold",
+            name="ROI Segmentation Threshold",
             description="Otsu threshold used for ROI segmentation",
             value=float(metrics.get("rois_threshold", 0.0)),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f"{unique_id} Median ROI Sum Intensity",
+            name="Median ROI Sum Intensity",
             description="Median of summed intensities across all ROIs",
             value=float(metrics.get("median_sum_rois_intensity", 0.0)),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f"{unique_id} Median ROI Neuropil Sum",
+            name="Median ROI Neuropil Sum",
             description="Median of summed neuropil intensities across all ROIs",
             value=float(metrics.get("median_sum_rois_neuropil", 0.0)),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
@@ -292,7 +292,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     roi_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} ROI Detection",
+        name="ROI Detection",
         description="Analysis of region of interest detection and segmentation quality",
         allow_failed_metrics=False,
         metrics=roi_metrics
@@ -306,26 +306,26 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
 
     photon_props_metrics.extend([
         QCMetric(
-            name=f"{unique_id} Photon Gain",
+            name="Photon Gain",
             description="Photon gain parameter from Poisson noise analysis",
             value=float(photon_gain),
             reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_physio_poisson_plot.png"),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f"{unique_id} Photon Offset",
+            name="Photon Offset",
             description="Photon offset parameter from Poisson noise analysis",
             value=float(metrics.get("photon_offset")),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f"{unique_id} Background Noise",
+            name="Background Noise",
             description="Background noise level in photon units",
             value=float(metrics.get("background_noise")),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f"{unique_id} Photon Flux Median",
+            name="Photon Flux Median",
             description="Median photon flux per pixel per frame",
             value=float(metrics.get("photon_flux_median_per_pixel_per_frame")),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
@@ -335,7 +335,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     photon_props_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} Photon Properties",
+        name="Photon Properties",
         description="Analysis of photon-related parameters and noise characteristics",
         allow_failed_metrics=False,
         metrics=photon_props_metrics,
@@ -355,25 +355,25 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         
     roi_photon_metrics.extend([
         QCMetric(
-            name=f"{unique_id} Mean Photons per ROI per Frame",
+            name="Mean Photons per ROI per Frame",
             description="Mean number of photons per ROI per frame",
             value=float(mean_photons_per_roi),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=roi_photon_status)],
         ),
         QCMetric(
-            name=f"{unique_id} Std Photons per ROI per Frame",
+            name="Std Photons per ROI per Frame",
             description="Standard deviation of photons per ROI per frame",
             value=float(metrics.get("std_photons_per_roi_per_frame")),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f"{unique_id} Mean Photons per ROI per Second",
+            name="Mean Photons per ROI per Second",
             description="Mean number of photons per ROI per second",
             value=float(metrics.get("mean_photons_per_roi_per_s")),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f"{unique_id} Std Photons per ROI per Second",
+            name="Std Photons per ROI per Second",
             description="Standard deviation of photons per ROI per second",
             value=float(metrics.get("std_photons_per_roi_per_s")),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
@@ -383,7 +383,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     roi_photon_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} Photon Counts per ROI",
+        name="Photon Counts per ROI",
         description="Analysis of photon counts within regions of interest",
         allow_failed_metrics=False,
         metrics=roi_photon_metrics
@@ -397,13 +397,13 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
 
     neuropil_photon_metrics.extend([
         QCMetric(
-            name=f"{unique_id} Mean Photons per Neuropil per Second",
+            name="Mean Photons per Neuropil per Second",
             description="Mean number of photons per neuropil region per second",
             value=float(neuropil_photons),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f"{unique_id} Std Photons per Neuropil per Second",
+            name="Std Photons per Neuropil per Second",
             description="Standard deviation of photons per neuropil region per second",
             value=float(metrics.get("std_photons_per_neuropil_per_s")),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
@@ -413,7 +413,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     neuropil_photon_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} Photon Counts per Neuropil",
+        name="Photon Counts per Neuropil",
         description="Analysis of photon counts in neuropil regions",
         allow_failed_metrics=False,
         metrics=neuropil_photon_metrics
@@ -427,13 +427,13 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         
     dprime_metrics.extend([
         QCMetric(
-            name=f"{unique_id} Median ROI D-prime",
+            name="Median ROI D-prime",
             description="Median d-prime value for event detection across all ROIs",
             value=float(median_dprime),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f"{unique_id} ROI D-prime Standard Deviation",
+            name="ROI D-prime Standard Deviation",
             description="Standard deviation of d-prime values for event detection across ROIs",
             value=float(metrics.get("std_rois_dprime", 0.0)),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
@@ -443,7 +443,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     dprime_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} Event Detection Performance",
+        name="Event Detection Performance",
         description="Analysis of event detection capability using d-prime metrics",
         allow_failed_metrics=False,
         metrics=dprime_metrics
@@ -465,7 +465,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
             zdrift_status = Status.FAIL
     
     zdrift_metrics.append(QCMetric(
-        name=f"{unique_id} Z-drift um",
+        name="Z-drift um",
         description="Analysis of z-drift in the recording",
         value=zdrift_um,
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=zdrift_status)],
@@ -473,45 +473,45 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
 
     zdrift_metrics.extend([
         QCMetric(
-            name=f'{unique_id} start_frame in local z-stack',
+            name='start_frame in local z-stack',
             description="# of frame in local z-stack matched to the start of the movie",
             value=int(zdrift['start_frame']),
             reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift_start.png"),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f'{unique_id} end_frame in local z-stack',
+            name='end_frame in local z-stack',
             description="# of frame in local z-stack matched to the end of the movie",
             value=int(zdrift['end_frame']),
             reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift_end.png"),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f'{unique_id} z-drift frame',
+            name='z-drift frame',
             description="Calculated z-drift in # of frames of the local z-stack",
             value=int(zdrift['z_drift_frame']),
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f'{unique_id} start correlation - peak',
+            name='start correlation - peak',
             description="Peak of the correlation between the start image and the local z-stack frames",
             value=zdrift['start_frame_corr'],
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f'{unique_id} end correlation - peak',
+            name='end correlation - peak',
             description="Peak of the correlation between the end image and the local z-stack frames",
             value=zdrift['end_frame_corr'],
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f'{unique_id} start correlation',
+            name='start correlation',
             description="Correlation between the start image and the local z-stack frames",
             value=zdrift['start_corr'],
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
         ),
         QCMetric(
-            name=f'{unique_id} end correlation',
+            name='end correlation',
             description="Correlation between the end image and the local z-stack frames",
             value=zdrift['end_corr'],
             status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
@@ -521,7 +521,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     zdrift_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} Z-drift Analysis",
+        name="Z-drift Analysis",
         description="Analysis of z-drift in the recording",
         allow_failed_metrics=False,
         metrics=zdrift_metrics
@@ -1389,7 +1389,7 @@ def write_legacy_movie_qc_metrics(output_dir: Path, unique_id: str, metrics: dic
         epilepsy_status = Status.PASS
         
     metric = QCMetric(
-        name=f"{unique_id} Epilepsy Probability",
+        name="Epilepsy Probability",
         description="Automated assessment of epileptic activity probability",
         reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_epilepsy_probability.png"),
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=epilepsy_status)],
@@ -1407,7 +1407,7 @@ def write_legacy_movie_qc_metrics(output_dir: Path, unique_id: str, metrics: dic
         status = Status.PASS
         
     metric = QCMetric(
-        name=f"{unique_id} Physio Intensity Plot",
+        name="Physio Intensity Plot",
         description="Percent change in intensity from start to end of movie",
         reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"),
         value=float(intensity_change),
