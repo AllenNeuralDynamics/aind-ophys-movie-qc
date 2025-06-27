@@ -1598,6 +1598,7 @@ if __name__ == "__main__":  # pragma: nocover
                                physio_filepath=h5_file,
                                session_json_path=session_json_path)
     metrics["zdrift"], save_imgs = local_zstack.get_z_drift() #TODO: expose parameters
+    metrics["zdrift"]["local_zstack_parameters"] = local_zstack.meta
 
     # Make the image
     fig = plt.figure(figsize=(10, 15))
