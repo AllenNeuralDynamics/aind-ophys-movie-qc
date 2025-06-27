@@ -82,7 +82,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         description=(
             "This metric quantifies the percent change in mean pixel intensity from the start to the end of the movie. "
             "It is calculated as 100 * (end_mean - start_mean) / start_mean, where start_mean and end_mean are the average pixel values in the first and last 200 frames (ignoring the first and last 300 frames). "
-            "A large negative value indicates photobleaching or instability.\n\n"
+            "A large negative value indicates photobleaching or instability."
             "Status is automatically assigned: PASS if |change| < 10%, PENDING if 10% <= |change| < 20%, FAIL if |change| >= 20%. "
             "If the status is not PASS, review the intensity progression plot for abrupt drops or trends."
         ),
@@ -113,7 +113,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         description=(
             "This metric estimates the probability of epileptiform activity in the movie using deconvolution and event detection. "
             "The signal is denoised and events are detected; events with prominence > 10 and width between 0.1 and 0.3 seconds are considered epileptic. "
-            "The metric is the fraction of such events among all detected events.\n\n"
+            "The metric is the fraction of such events among all detected events."
             "Status is automatically assigned: PASS if probability is 0, FAIL otherwise. "
             "If FAIL, inspect the event plot for clusters of large, brief events."
         ),
@@ -143,11 +143,11 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     merged_snr_dprime_metric = QCMetric(
         name="Event detection statistics",
         description=(
-            "This metric combines signal-to-noise ratio (SNR) and event detection (d-prime) statistics.\n\n"
+            "This metric combines signal-to-noise ratio (SNR) and event detection (d-prime) statistics."
             "SNR is calculated as the mean pixel value divided by the standard deviation for each frame, summarized as mean, median, and standard deviation across the movie. "
-            "Higher SNR indicates better image quality.\n\n"
+            "Higher SNR indicates better image quality."
             "D-prime is calculated for each ROI using photon flux and neuropil estimates, following Wilt et al. (2013), and summarized as the median and standard deviation. "
-            "Higher d-prime values indicate better event detectability.\n\n"
+            "Higher d-prime values indicate better event detectability."
             "Status is always PASS (no automatic threshold). Review low SNR or d-prime values for possible issues with signal quality or event detection."
         ),
         value=snr_dprime_values,
@@ -188,7 +188,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         name="Pixel value distribution",
         description=(
             "This metric summarizes the distribution of pixel values in the movie, including the number of saturated pixels (at or above max range), low intensity pixels (at or below min range), and the 5th/95th percentiles. "
-            "Saturated and low pixels are counted in the first 500 frames.\n\n"
+            "Saturated and low pixels are counted in the first 500 frames."
             "Status is automatically assigned: PASS if saturated pixels < 800, PENDING if 800 <= saturated < 1000, FAIL if >= 1000. "
             "If not PASS, review the intensity histogram for evidence of clipping or poor dynamic range."
         ),
@@ -232,12 +232,12 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     merged_metric = QCMetric(
         name="Photon detection statistics",
         description=(
-            "This metric summarizes photon detection.\n\n"
+            "This metric summarizes photon detection."
             "ROI segmentation is performed using Otsu thresholding on a high-pass filtered median image from the start of the movie. "
-            "Mean ROI intensity, segmentation threshold, and median neuropil sum are reported.\n\n"
+            "Mean ROI intensity, segmentation threshold, and median neuropil sum are reported."
             "Photon gain and offset are estimated by fitting the variance vs. mean relationship for non-saturated pixels. "
             "Photon flux and background noise are derived from these parameters. "
-            "Photon statistics are reported as mean/median values per ROI and neuropil, per frame and per second.\n\n"
+            "Photon statistics are reported as mean/median values per ROI and neuropil, per frame and per second."
             "Status is always PASS (no automatic threshold). Review for outliers or unexpected values."
         ),
         value=merged_values,
