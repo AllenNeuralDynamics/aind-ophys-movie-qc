@@ -932,6 +932,8 @@ if __name__ == "__main__":  # pragma: nocover
     output_dir = Path(args.output_dir)
     h5_file = next(Path(args.input_dir).rglob("*registered.h5"))
     unique_id = "_".join(h5_file.name.split("_")[:-1])
+    if unique_id == "pophys":
+        unique_id = "plane_0" #TODO: jeez I need to fix this
     output_dir = make_output_directory(output_dir, unique_id)
 
     frame_rate = args.frame_rate
