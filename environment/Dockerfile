@@ -26,4 +26,3 @@ RUN cd /.code-server \
     && tar -xvf code-server.tar.gz \
     && rm code-server.tar.gz \
     && ln -s /.code-server/code-server-4.95.3-linux-amd64/bin/code-server  /usr/bin/code-server
-

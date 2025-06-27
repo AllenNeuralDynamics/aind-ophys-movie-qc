@@ -9,6 +9,7 @@ import shutil
 import h5py
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
 import numpy as np
 from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status, QCEvaluation, Modality, Stage
 from oasis.functions import deconvolve as oasis_deconvolve
@@ -1635,24 +1636,50 @@ if __name__ == "__main__":  # pragma: nocover
                                session_json_path=session_json_path)
     metrics["zdrift"], save_imgs = local_zstack.get_z_drift() #TODO: expose parameters
 
+    # Make the image
+    fig = plt.figure(figsize=(10, 15))
+    gs = GridSpec(3, 2, height_ratios=[1, 1, 0.5], figure=fig)
+    axes = np.empty((3, 2), dtype=object)
+
     image_segments = ['start', 'end']
     image_types = ['image', 'zstack_plane']
-    for image_segment in image_segments:
-        fig, axes = plt.subplots(1, 2, figsize=(12,5))
-        for i, image_type in enumerate(image_types):
+    for yi, image_segment in enumerate(image_segments):
+        for xi, image_type in enumerate(image_types):
             key = f'{image_segment}_{image_type}'
+            ax = fig.add_subplot(gs[yi, xi])
             img = save_imgs[key]
-            axes[i].imshow(img, cmap='gray',
-                            vmin=np.percentile(img.flatten(), 1),
-                            vmax=np.percentile(img.flatten(), 99))
-            axes[i].set_title(key)
-        save_figure_to_storage(
-            fig,
-            output_dir,
-            base_file,
-            f"zdrift_{image_segment}",
-            dpi=300
-        )
+            ax.imshow(img, cmap='gray',
+                    vmin=np.percentile(img.flatten(), 1),
+                    vmax=np.percentile(img.flatten(), 99))
+            ax.set_title(key)
+            axes[yi, xi] = ax
+
+    ax_corr = fig.add_subplot(gs[2, :])
+    start_corr = metrics["zdrift"]["start_corr"]
+    end_corr = metrics["zdrift"]["end_corr"]    
+    start_idx = metrics["zdrift"]["start_frame"]
+    end_idx = metrics["zdrift"]["end_frame"]
+    zdrift_um = metrics["zdrift"]["z_drift_um"]
+
+    ax_corr.plot(start_corr, label='start_corr')
+    ax_corr.plot(end_corr, label='end_corr')
+    ax_corr.legend()
+    ax_corr.axvline(start_idx, color='k', linestyle='--')
+    ax_corr.axvline(end_idx, color='k', linestyle='--')
+    ax_corr.set_title(f'Start frame {start_idx}, end frame {end_idx}, zdrift = {zdrift_um} um')
+    ax_corr.set_xlabel('Z plane')
+    ax_corr.set_ylabel('Correlation')
+    
+    fig.tight_layout()
+    
+    # Save the image
+    save_figure_to_storage(
+        fig,
+        output_dir,
+        base_file,
+        f"zdrift",
+        dpi=300
+    )
     
     # save z-stack files (both raw and registered)
     zstack_save_filepath = Path(args.output_dir) / unique_id / zstack_filepath.name
