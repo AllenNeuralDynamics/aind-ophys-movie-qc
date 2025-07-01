@@ -206,6 +206,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     )
     save_qc_evaluation_to_file(merged_pixel_evaluation, output_dir, f"{unique_id}_saturated_low_percentile_pixels")
 
+
     # Paths to the two images to combine
     seg_img_path = os.path.join(output_dir, f"{unique_id}_registered_basic_segmentation_image.png")
     poisson_img_path = os.path.join(output_dir, f"{unique_id}_registered_physio_poisson_plot.png")
@@ -254,84 +255,6 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     )
     save_qc_evaluation_to_file(merged_evaluation, output_dir, f"{unique_id}_roi_photon_neuropil_metrics")
 
-    print(f"Successfully created QC evaluation groups with _aggregate.json suffix for: {unique_id}")
-
-    # 12. Z-drift Evaluation
-    zdrift_metrics = []
-    zdrift = metrics.get("zdrift", 0)
-    if zdrift == 0:
-        zdrift_status = Status.PENDING
-    else:
-        zdrift_um = float(zdrift['z_drift_um'])
-        if abs(zdrift_um) <= 10:  # Low drift TODO: expose this threshold somewhere
-            zdrift_status = Status.PASS
-        else:
-            zdrift_status = Status.FAIL
-    
-    zdrift_metrics.append(QCMetric(
-        name="Z-drift um",
-        description="Analysis of z-drift in the recording",
-        value=zdrift_um,
-        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=zdrift_status)],
-    ))
-
-    zdrift_metrics.extend([
-        QCMetric(
-            name='start_frame in local z-stack',
-            description="# of frame in local z-stack matched to the start of the movie",
-            value=int(zdrift['start_frame']),
-            reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift_start.png"),
-            status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
-        ),
-        QCMetric(
-            name='end_frame in local z-stack',
-            description="# of frame in local z-stack matched to the end of the movie",
-            value=int(zdrift['end_frame']),
-            reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift_end.png"),
-            status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
-        ),
-        QCMetric(
-            name='z-drift frame',
-            description="Calculated z-drift in # of frames of the local z-stack",
-            value=int(zdrift['z_drift_frame']),
-            status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
-        ),
-        QCMetric(
-            name='start correlation - peak',
-            description="Peak of the correlation between the start image and the local z-stack frames",
-            value=zdrift['start_frame_corr'],
-            status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
-        ),
-        QCMetric(
-            name='end correlation - peak',
-            description="Peak of the correlation between the end image and the local z-stack frames",
-            value=zdrift['end_frame_corr'],
-            status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
-        ),
-        QCMetric(
-            name='start correlation',
-            description="Correlation between the start image and the local z-stack frames",
-            value=zdrift['start_corr'],
-            status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
-        ),
-        QCMetric(
-            name='end correlation',
-            description="Correlation between the end image and the local z-stack frames",
-            value=zdrift['end_corr'],
-            status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
-        )
-    ])
-
-    zdrift_evaluation = QCEvaluation(
-        modality=Modality.POPHYS,
-        stage=Stage.PROCESSING,
-        name="Z-drift Analysis",
-        description="Analysis of z-drift in the recording",
-        allow_failed_metrics=False,
-        metrics=zdrift_metrics
-    )
-
-    print(f"Successfully created 11 QC evaluation groups with _aggregate.json suffix for: {unique_id}")
 
     # 12. Z-drift Evaluation
     zdrift_qc_threshold = 10 #TODO: where is the best place to put this threshold?
@@ -359,6 +282,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         name=f"{unique_id} Z-drift Analysis",
         description="Z-drift analysis metrics",
         value=zdrift_metrics_dict,
+        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift.png")
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
     )
 
@@ -372,6 +296,8 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     )
 
     save_qc_evaluation_to_file(zdrift_evaluation, output_dir, f"{unique_id}_z_drift")
+
+    print(f"Successfully created 12 QC evaluation groups with _evaluation.json suffix for: {unique_id}")
 
 
 def get_and_plot_epilepsy_probability(
