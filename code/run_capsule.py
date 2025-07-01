@@ -287,7 +287,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         description="Z-drift analysis metrics",
         value=zdrift_metrics_dict,
         reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift.png")
-        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
+        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=zdrift_status)],
     )
 
     zdrift_evaluation = QCEvaluation(
