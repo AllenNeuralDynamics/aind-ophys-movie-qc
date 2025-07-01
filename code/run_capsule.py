@@ -194,7 +194,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         ),
         value=merged_pixel_values,
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=sat_status)],
-        reference=str(f"{unique_id}/movie_qc/{unique_id}_physio_intensity_hist.png"),
+        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_hist.png"),
     )
     merged_pixel_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
@@ -268,8 +268,6 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
             zdrift_status = Status.PASS
         else:
             zdrift_status = Status.FAIL
-    
-    metrics["zdrift"]["local_zstack_parameters"]
     
     zdrift_metrics_dict = {
         "z_drift_um": zdrift_um,
