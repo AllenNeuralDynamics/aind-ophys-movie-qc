@@ -269,6 +269,8 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         else:
             zdrift_status = Status.FAIL
     
+    metrics["zdrift"]["local_zstack_parameters"]
+    
     zdrift_metrics_dict = {
         "z_drift_um": zdrift_um,
         "start_frame": int(zdrift['start_frame']),
@@ -276,6 +278,10 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         "z_drift_frame": int(zdrift['z_drift_frame']),
         "start_frame_corr": round(zdrift['start_frame_corr'], 3),
         "end_frame_corr": round(zdrift['end_frame_corr'], 3),
+        "nb_of_loops": int(zdrift["local_zstack_parameters"]['nb_of_loops']),
+        "nb_of_planes": int(zdrift["local_zstack_parameters"]['nb_of_planes']),
+        "z_spacing_um": round(zdrift["local_zstack_parameters"]['z_spacing_um'], 2),
+        "total_z_distance": round(zdrift["local_zstack_parameters"]['total_z_distance'], 2),        
     }
 
     zdrift_metrics = QCMetric(
