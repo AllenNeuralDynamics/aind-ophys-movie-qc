@@ -295,7 +295,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
     zdrift_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name=f"{unique_id} Z-drift Analysis",
+        name=f"Z-drift Analysis",
         description=f"Analysis of z-drift in the recording, with threshold {zdrift_qc_threshold} um",
         allow_failed_metrics=False,
         metrics=[zdrift_metrics]
