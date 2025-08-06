@@ -21,8 +21,9 @@ RUN pip install -U --no-cache-dir \
     scipy==1.11.2
 
 ADD "https://github.com/coder/code-server/releases/download/v4.95.3/code-server-4.95.3-linux-amd64.tar.gz" /.code-server/code-server.tar.gz
-	
+
 RUN cd /.code-server \
     && tar -xvf code-server.tar.gz \
     && rm code-server.tar.gz \
     && ln -s /.code-server/code-server-4.95.3-linux-amd64/bin/code-server  /usr/bin/code-server
+

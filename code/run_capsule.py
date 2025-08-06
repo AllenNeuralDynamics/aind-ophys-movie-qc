@@ -19,6 +19,7 @@ from scipy.linalg import LinAlgError
 from scipy.stats import gaussian_kde
 from skimage import filters, measure
 from local_z_stack import LocalZStack
+
 from PIL import Image
 from image_utils import combine_images_vertically  # Adjust import if needed
 
@@ -244,6 +245,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         value=merged_values,
         reference=combined_img_path,
         status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)]
+
     )
     merged_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
@@ -1131,6 +1133,67 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def write_legacy_movie_qc_metrics(output_dir: Path, unique_id: str, metrics: dict) -> None:
+    """Write only the legacy QC metrics currently expected by the aggregator.
+    
+    This function writes only the 2 specific metrics that the current aggregator's
+    create_movie_qc_evaluations function looks for:
+    - epilepsy_probability_metric 
+    - physio_intensity_plot_metric
+    
+    Parameters
+    ----------
+    output_dir: Path
+        output directory
+    unique_id: str
+        unique_id number
+    metrics: dict
+        dictionary containing all calculated metrics
+
+    Returns
+    -------
+    None
+    """
+    
+    # Only create the 2 metrics that the current aggregator expects
+    
+    # 1. Epilepsy probability metric (matches current aggregator pattern)
+    epilepsy_prob = metrics.get("epilepsy_probability", 0)
+    if epilepsy_prob > 0:
+        epilepsy_status = Status.FAIL
+    else:
+        epilepsy_status = Status.PASS
+        
+    metric = QCMetric(
+        name=f"{unique_id} Epilepsy Probability",
+        description="Automated assessment of epileptic activity probability",
+        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_epilepsy_probability.png"),
+        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=epilepsy_status)],
+        value=float(epilepsy_prob)
+    )
+    save_qc_metric_to_file(metric, output_dir, f"{unique_id}_registered_epilepsy_probability_metric")
+
+    # 2. Physio intensity plot metric (matches current aggregator pattern)
+    intensity_change = metrics.get("percent_change_intensity", 0.0)
+    if abs(intensity_change) >= 20:
+        status = Status.FAIL
+    elif abs(intensity_change) >= 10:
+        status = Status.PENDING
+    else:
+        status = Status.PASS
+        
+    metric = QCMetric(
+        name=f"{unique_id} Physio Intensity Plot",
+        description="Percent change in intensity from start to end of movie",
+        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"),
+        value=float(intensity_change),
+        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=status)],
+    )
+    save_qc_metric_to_file(metric, output_dir, f"{unique_id}_registered_physio_intensity_plot_metric")
+
+    print(f"Successfully created 2 legacy QC metrics for aggregator compatibility: {unique_id}")
+
+
 if __name__ == "__main__":  # pragma: nocover
     # Create an ArgumentParser object
 
@@ -1347,6 +1410,7 @@ if __name__ == "__main__":  # pragma: nocover
                                physio_filepath=h5_file,
                                session_json_path=session_json_path)
     metrics["zdrift"], save_imgs = local_zstack.get_z_drift() #TODO: expose parameters
+
 
     metrics["zdrift"]["local_zstack_parameters"] = local_zstack.meta
 

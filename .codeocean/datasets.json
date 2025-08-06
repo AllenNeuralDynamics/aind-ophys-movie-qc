@@ -2,12 +2,8 @@
 	"version": 1,
 	"attached_datasets": [
 		{
-			"id": "780fe280-0851-49a6-b567-d8d54c00b477",
-			"mount": "jinho_zstack_qc_test"
-		},
-		{
-			"id": "7df10018-e874-4523-a244-9a5b40450125",
-			"mount": "multiplane-ophys_783551_2025-06-14_12-21-13_processed_2025-06-15_19-24-14"
+			"id": "ed06448e-744d-4094-814e-92ad1c1dc57b",
+			"mount": "multiplane-ophys_790107_2025-06-12_12-47-31_processed_2025-06-13_16-59-42"
 		}
 	]
 }
