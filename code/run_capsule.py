@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 from datetime import datetime as dt
+import logging
 from pathlib import Path
 from typing import Union
 import shutil
@@ -11,7 +12,14 @@ import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
 import numpy as np
-from aind_data_schema.core.quality_control import QCMetric, QCStatus, Status, QCEvaluation, Modality, Stage
+from aind_data_schema.core.quality_control import (
+    QCMetric,
+    QCStatus,
+    Status,
+    QCEvaluation,
+    Modality,
+    Stage,
+)
 from oasis.functions import deconvolve as oasis_deconvolve
 
 from scipy import ndimage
@@ -23,9 +31,12 @@ from local_z_stack import LocalZStack
 from PIL import Image
 from image_utils import combine_images_vertically  # Adjust import if needed
 
-def save_qc_evaluation_to_file(evaluation: QCEvaluation, output_dir: Path, filename: str) -> None:
+
+def save_qc_evaluation_to_file(
+    evaluation: QCEvaluation, output_dir: Path, filename: str
+) -> None:
     """Save a QC evaluation to a JSON file.
-    
+
     Parameters
     ----------
     evaluation : QCEvaluation
@@ -34,12 +45,12 @@ def save_qc_evaluation_to_file(evaluation: QCEvaluation, output_dir: Path, filen
         The output directory
     filename : str
         The filename (without extension) to save to
-        
+
     Returns
     -------
     None
     """
-    
+
     filepath = output_dir / f"{filename}_evaluation.json"
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(json.loads(evaluation.model_dump_json()), f, indent=4)
@@ -77,7 +88,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         status = Status.PENDING
     else:
         status = Status.PASS
-        
+
     intensity_metric = QCMetric(
         name="Intensity stability",
         description=(
@@ -87,20 +98,26 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
             "Status is automatically assigned: PASS if |change| < 10%, PENDING if 10% <= |change| < 20%, FAIL if |change| >= 20%. "
             "If the status is not PASS, review the intensity progression plot for abrupt drops or trends."
         ),
-        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"),
+        reference=str(
+            f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"
+        ),
         value=float(intensity_change),
-        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=status)],
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=status)
+        ],
     )
-    
+
     intensity_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
         name="Intensity stability",
         description="Analysis of intensity changes throughout the movie",
         allow_failed_metrics=False,
-        metrics=[intensity_metric]
+        metrics=[intensity_metric],
     )
-    save_qc_evaluation_to_file(intensity_evaluation, output_dir, f"{unique_id}_intensity_change")
+    save_qc_evaluation_to_file(
+        intensity_evaluation, output_dir, f"{unique_id}_intensity_change"
+    )
 
     # 2. Epilepsy Probability Evaluation
     epilepsy_prob = metrics.get("epilepsy_probability", 0)
@@ -108,7 +125,7 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         epilepsy_status = Status.FAIL
     else:
         epilepsy_status = Status.PASS
-        
+
     epilepsy_metric = QCMetric(
         name="Epilepsy probability",
         description=(
@@ -118,9 +135,13 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
             "Status is automatically assigned: PASS if probability is 0, FAIL otherwise. "
             "If FAIL, inspect the event plot for clusters of large, brief events."
         ),
-        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_epilepsy_probability.png"),
-        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=epilepsy_status)],
-        value=float(epilepsy_prob), 
+        reference=str(
+            f"{unique_id}/movie_qc/{unique_id}_registered_epilepsy_probability.png"
+        ),
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=epilepsy_status)
+        ],
+        value=float(epilepsy_prob),
     )
 
     epilepsy_evaluation = QCEvaluation(
@@ -129,9 +150,11 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         name="Epilepsy probability",
         description="Detection of potential epileptic activity in the recording",
         allow_failed_metrics=False,
-        metrics=[epilepsy_metric]
+        metrics=[epilepsy_metric],
     )
-    save_qc_evaluation_to_file(epilepsy_evaluation, output_dir, f"{unique_id}_epilepsy_probability")
+    save_qc_evaluation_to_file(
+        epilepsy_evaluation, output_dir, f"{unique_id}_epilepsy_probability"
+    )
 
     # Merge SNR and Event Detection (D-prime) Evaluations into a single QCMetric
     snr_dprime_values = {
@@ -152,7 +175,9 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
             "Status is always PASS (no automatic threshold). Review low SNR or d-prime values for possible issues with signal quality or event detection."
         ),
         value=snr_dprime_values,
-        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)],
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)
+        ],
     )
     merged_snr_dprime_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
@@ -160,9 +185,11 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         name="Event detection statistics",
         description="Combined SNR and event detection (d-prime) metrics for image quality and event detection performance.",
         allow_failed_metrics=False,
-        metrics=[merged_snr_dprime_metric]
+        metrics=[merged_snr_dprime_metric],
     )
-    save_qc_evaluation_to_file(merged_snr_dprime_evaluation, output_dir, f"{unique_id}_snr_event_detection")
+    save_qc_evaluation_to_file(
+        merged_snr_dprime_evaluation, output_dir, f"{unique_id}_snr_event_detection"
+    )
 
     # 4+5+6. Saturated, Low Intensity, and Intensity Percentiles Evaluation (fully merged for table output)
     saturated_pixels = metrics.get("nb_saturated_pixels", 0)
@@ -194,8 +221,12 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
             "If not PASS, review the intensity histogram for evidence of clipping or poor dynamic range."
         ),
         value=merged_pixel_values,
-        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=sat_status)],
-        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_hist.png"),
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=sat_status)
+        ],
+        reference=str(
+            f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_hist.png"
+        ),
     )
     merged_pixel_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
@@ -203,15 +234,24 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         name="Pixel value distribution",
         description="Analysis of saturated, low intensity, and percentile pixel metrics in the recording (table-friendly)",
         allow_failed_metrics=False,
-        metrics=[merged_pixel_metric]
+        metrics=[merged_pixel_metric],
     )
-    save_qc_evaluation_to_file(merged_pixel_evaluation, output_dir, f"{unique_id}_saturated_low_percentile_pixels")
-
+    save_qc_evaluation_to_file(
+        merged_pixel_evaluation,
+        output_dir,
+        f"{unique_id}_saturated_low_percentile_pixels",
+    )
 
     # Paths to the two images to combine
-    seg_img_path = os.path.join(output_dir, f"{unique_id}_registered_basic_segmentation_image.png")
-    poisson_img_path = os.path.join(output_dir, f"{unique_id}_registered_physio_poisson_plot.png")
-    combined_img_path = os.path.join(output_dir, f"{unique_id}_roi_and_photon_metrics.png")
+    seg_img_path = os.path.join(
+        output_dir, f"{unique_id}_registered_basic_segmentation_image.png"
+    )
+    poisson_img_path = os.path.join(
+        output_dir, f"{unique_id}_registered_physio_poisson_plot.png"
+    )
+    combined_img_path = os.path.join(
+        output_dir, f"{unique_id}_roi_and_photon_metrics.png"
+    )
 
     # Read images and stack vertically using PIL utility
     seg_img = Image.open(seg_img_path)
@@ -226,10 +266,18 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         "Photon Gain": float(metrics.get("photon_gain")),
         "Photon Offset": float(metrics.get("photon_offset")),
         "Background Noise": float(metrics.get("background_noise")),
-        "Photon Flux Median": float(metrics.get("photon_flux_median_per_pixel_per_frame")),
-        "Mean Photons per ROI per Frame": float(metrics.get("mean_photons_per_roi_per_frame")),
-        "Mean Photons per ROI per Second": float(metrics.get("mean_photons_per_roi_per_s")),
-        "Mean Photons per Neuropil per Second": float(metrics.get("mean_photons_per_neuropil_per_s")),
+        "Photon Flux Median": float(
+            metrics.get("photon_flux_median_per_pixel_per_frame")
+        ),
+        "Mean Photons per ROI per Frame": float(
+            metrics.get("mean_photons_per_roi_per_frame")
+        ),
+        "Mean Photons per ROI per Second": float(
+            metrics.get("mean_photons_per_roi_per_s")
+        ),
+        "Mean Photons per Neuropil per Second": float(
+            metrics.get("mean_photons_per_neuropil_per_s")
+        ),
     }
     merged_metric = QCMetric(
         name="Photon detection statistics",
@@ -244,8 +292,9 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         ),
         value=merged_values,
         reference=combined_img_path,
-        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)]
-
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)
+        ],
     )
     merged_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
@@ -253,35 +302,40 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         name="Photon detection statistics",
         description="Analysis of ROI detection, photon-related parameters, and neuropil photon counts, with combined plot.",
         allow_failed_metrics=False,
-        metrics=[merged_metric]
+        metrics=[merged_metric],
     )
-    save_qc_evaluation_to_file(merged_evaluation, output_dir, f"{unique_id}_roi_photon_neuropil_metrics")
-
+    save_qc_evaluation_to_file(
+        merged_evaluation, output_dir, f"{unique_id}_roi_photon_neuropil_metrics"
+    )
 
     # 12. Z-drift Evaluation
-    zdrift_qc_threshold = 10 #TODO: where is the best place to put this threshold?
+    zdrift_qc_threshold = 10  # TODO: where is the best place to put this threshold?
     zdrift_metrics = []
     zdrift = metrics.get("zdrift", -100)
     if zdrift == -100:
         zdrift_status = Status.PENDING
     else:
-        zdrift_um = float(zdrift['z_drift_um'])
-        if abs(zdrift_um) <= zdrift_qc_threshold:  # Low drift TODO: expose this threshold somewhere
+        zdrift_um = float(zdrift["z_drift_um"])
+        if (
+            abs(zdrift_um) <= zdrift_qc_threshold
+        ):  # Low drift TODO: expose this threshold somewhere
             zdrift_status = Status.PASS
         else:
             zdrift_status = Status.FAIL
-    
+
     zdrift_metrics_dict = {
         "z_drift_um": zdrift_um,
-        "start_frame": int(zdrift['start_frame']),
-        "end_frame": int(zdrift['end_frame']),
-        "z_drift_frame": int(zdrift['z_drift_frame']),
-        "start_frame_corr": round(zdrift['start_frame_corr'], 3),
-        "end_frame_corr": round(zdrift['end_frame_corr'], 3),
-        "nb_of_loops": int(zdrift["local_zstack_parameters"]['nb_of_loops']),
-        "nb_of_planes": int(zdrift["local_zstack_parameters"]['nb_of_planes']),
-        "z_spacing_um": round(zdrift["local_zstack_parameters"]['z_spacing_um'], 2),
-        "total_z_distance": round(zdrift["local_zstack_parameters"]['total_z_distance'], 2),        
+        "start_frame": int(zdrift["start_frame"]),
+        "end_frame": int(zdrift["end_frame"]),
+        "z_drift_frame": int(zdrift["z_drift_frame"]),
+        "start_frame_corr": round(zdrift["start_frame_corr"], 3),
+        "end_frame_corr": round(zdrift["end_frame_corr"], 3),
+        "nb_of_loops": int(zdrift["local_zstack_parameters"]["nb_of_loops"]),
+        "nb_of_planes": int(zdrift["local_zstack_parameters"]["nb_of_planes"]),
+        "z_spacing_um": round(zdrift["local_zstack_parameters"]["z_spacing_um"], 2),
+        "total_z_distance": round(
+            zdrift["local_zstack_parameters"]["total_z_distance"], 2
+        ),
     }
 
     zdrift_metrics = QCMetric(
@@ -289,7 +343,9 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         description="Z-drift analysis metrics",
         value=zdrift_metrics_dict,
         reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift.png"),
-        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=zdrift_status)],
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=zdrift_status)
+        ],
     )
 
     zdrift_evaluation = QCEvaluation(
@@ -298,12 +354,14 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         name=f"Z-drift Analysis",
         description=f"Analysis of z-drift in the recording, with threshold {zdrift_qc_threshold} um",
         allow_failed_metrics=False,
-        metrics=[zdrift_metrics]
+        metrics=[zdrift_metrics],
     )
 
     save_qc_evaluation_to_file(zdrift_evaluation, output_dir, f"{unique_id}_z_drift")
 
-    print(f"Successfully created 12 QC evaluation groups with _evaluation.json suffix for: {unique_id}")
+    print(
+        f"Successfully created 12 QC evaluation groups with _evaluation.json suffix for: {unique_id}"
+    )
 
 
 def get_and_plot_epilepsy_probability(
@@ -457,7 +515,9 @@ def get_spike_prominence_and_width(
         else:
             pre_half_idx = np.min(len(pre_spikes) - pre_half_idxs)
 
-        post_half_idxs = np.where(post_spikes < local_amplitude - local_prominence / 2)[0]
+        post_half_idxs = np.where(post_spikes < local_amplitude - local_prominence / 2)[
+            0
+        ]
         if not post_half_idxs.any():
             post_half_idx = len(post_spikes)
         else:
@@ -664,7 +724,9 @@ def plot_poisson_curve(photon_gain_parameters: dict) -> plt.Figure:
     return fig
 
 
-def plot_avg_intensity_progression(cropped_video: np.ndarray, binning: int) -> plt.Figure:
+def plot_avg_intensity_progression(
+    cropped_video: np.ndarray, binning: int
+) -> plt.Figure:
     """
     Obtain a plot showing the average intensity over time.
 
@@ -719,7 +781,9 @@ def get_saturation_metrics(
     nb_undersat_pixels = (cropped_video.flatten() <= min_pixel_range).sum()
     nb_undersat_pixels = nb_undersat_pixels / float(cropped_video.shape[0])
     nb_undersat_pixels_perc = (
-        100 * nb_undersat_pixels / float(cropped_video.shape[1] * cropped_video.shape[2])
+        100
+        * nb_undersat_pixels
+        / float(cropped_video.shape[1] * cropped_video.shape[2])
     )
 
     return {
@@ -886,7 +950,7 @@ def get_photon_gain_parameters(
     cropped_video: np.ndarray,
     max_pixel_range: int,
     perc_min: int = 3,
-    perc_max: int = 90
+    perc_max: int = 90,
 ) -> dict:
     """Photon Gain.
 
@@ -1086,7 +1150,8 @@ def parse_args() -> argparse.Namespace:
         type=list,
         default=(30, 30),
         help=(
-            "cropped area of movie to use for analysis. Useful to remove" " edge effects"
+            "cropped area of movie to use for analysis. Useful to remove"
+            " edge effects"
         ),
     )
 
@@ -1133,14 +1198,16 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def write_legacy_movie_qc_metrics(output_dir: Path, unique_id: str, metrics: dict) -> None:
+def write_legacy_movie_qc_metrics(
+    output_dir: Path, unique_id: str, metrics: dict
+) -> None:
     """Write only the legacy QC metrics currently expected by the aggregator.
-    
+
     This function writes only the 2 specific metrics that the current aggregator's
     create_movie_qc_evaluations function looks for:
-    - epilepsy_probability_metric 
+    - epilepsy_probability_metric
     - physio_intensity_plot_metric
-    
+
     Parameters
     ----------
     output_dir: Path
@@ -1154,24 +1221,30 @@ def write_legacy_movie_qc_metrics(output_dir: Path, unique_id: str, metrics: dic
     -------
     None
     """
-    
+
     # Only create the 2 metrics that the current aggregator expects
-    
+
     # 1. Epilepsy probability metric (matches current aggregator pattern)
     epilepsy_prob = metrics.get("epilepsy_probability", 0)
     if epilepsy_prob > 0:
         epilepsy_status = Status.FAIL
     else:
         epilepsy_status = Status.PASS
-        
+
     metric = QCMetric(
         name=f"{unique_id} Epilepsy Probability",
         description="Automated assessment of epileptic activity probability",
-        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_epilepsy_probability.png"),
-        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=epilepsy_status)],
-        value=float(epilepsy_prob)
+        reference=str(
+            f"{unique_id}/movie_qc/{unique_id}_registered_epilepsy_probability.png"
+        ),
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=epilepsy_status)
+        ],
+        value=float(epilepsy_prob),
     )
-    save_qc_metric_to_file(metric, output_dir, f"{unique_id}_registered_epilepsy_probability_metric")
+    save_qc_metric_to_file(
+        metric, output_dir, f"{unique_id}_registered_epilepsy_probability_metric"
+    )
 
     # 2. Physio intensity plot metric (matches current aggregator pattern)
     intensity_change = metrics.get("percent_change_intensity", 0.0)
@@ -1181,17 +1254,25 @@ def write_legacy_movie_qc_metrics(output_dir: Path, unique_id: str, metrics: dic
         status = Status.PENDING
     else:
         status = Status.PASS
-        
+
     metric = QCMetric(
         name=f"{unique_id} Physio Intensity Plot",
         description="Percent change in intensity from start to end of movie",
-        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"),
+        reference=str(
+            f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"
+        ),
         value=float(intensity_change),
-        status_history=[QCStatus(evaluator="Automated", timestamp=dt.now(), status=status)],
+        status_history=[
+            QCStatus(evaluator="Automated", timestamp=dt.now(), status=status)
+        ],
     )
-    save_qc_metric_to_file(metric, output_dir, f"{unique_id}_registered_physio_intensity_plot_metric")
+    save_qc_metric_to_file(
+        metric, output_dir, f"{unique_id}_registered_physio_intensity_plot_metric"
+    )
 
-    print(f"Successfully created 2 legacy QC metrics for aggregator compatibility: {unique_id}")
+    print(
+        f"Successfully created 2 legacy QC metrics for aggregator compatibility: {unique_id}"
+    )
 
 
 if __name__ == "__main__":  # pragma: nocover
@@ -1319,7 +1400,9 @@ if __name__ == "__main__":  # pragma: nocover
 
     rois_data, roi_figure = get_and_plot_basic_segmentation(start_section)
 
-    save_figure_to_storage(roi_figure, output_dir, base_file, "basic_segmentation_image")
+    save_figure_to_storage(
+        roi_figure, output_dir, base_file, "basic_segmentation_image"
+    )
 
     metrics.update(rois_data)
     metrics.update(photon_gain_parameters)
@@ -1402,69 +1485,78 @@ if __name__ == "__main__":  # pragma: nocover
         base_file,
         "physio_poisson_plot",
     )
-    
+
     # z-drift metrics
-    session_json_path = next(Path(args.input_dir).rglob("session.json"))
-    zstack_filepath = next(Path(args.input_dir).rglob(f'{unique_id}_z_stack_local.h5'))
-    local_zstack = LocalZStack(zstack_filepath=zstack_filepath,
-                               physio_filepath=h5_file,
-                               session_json_path=session_json_path)
-    metrics["zdrift"], save_imgs = local_zstack.get_z_drift() #TODO: expose parameters
+    try:
+        session_json_path = next(Path(args.input_dir).rglob("session.json"))
+        zstack_filepath = next(
+            Path(args.input_dir).rglob(f"{unique_id}_z_stack_local.h5")
+        )
+        local_zstack = LocalZStack(
+            zstack_filepath=zstack_filepath,
+            physio_filepath=h5_file,
+            session_json_path=session_json_path,
+        )
+        metrics["zdrift"], save_imgs = (
+            local_zstack.get_z_drift()
+        )  # TODO: expose parameters
 
+        metrics["zdrift"]["local_zstack_parameters"] = local_zstack.meta
 
-    metrics["zdrift"]["local_zstack_parameters"] = local_zstack.meta
+        # Make the image
+        fig = plt.figure(figsize=(10, 15))
+        gs = GridSpec(3, 2, height_ratios=[1, 1, 0.5], figure=fig)
+        axes = np.empty((3, 2), dtype=object)
 
-    # Make the image
-    fig = plt.figure(figsize=(10, 15))
-    gs = GridSpec(3, 2, height_ratios=[1, 1, 0.5], figure=fig)
-    axes = np.empty((3, 2), dtype=object)
-
-    image_segments = ['start', 'end']
-    image_types = ['image', 'zstack_plane']
-    for yi, image_segment in enumerate(image_segments):
-        for xi, image_type in enumerate(image_types):
-            key = f'{image_segment}_{image_type}'
-            ax = fig.add_subplot(gs[yi, xi])
-            img = save_imgs[key]
-            ax.imshow(img, cmap='gray',
+        image_segments = ["start", "end"]
+        image_types = ["image", "zstack_plane"]
+        for yi, image_segment in enumerate(image_segments):
+            for xi, image_type in enumerate(image_types):
+                key = f"{image_segment}_{image_type}"
+                ax = fig.add_subplot(gs[yi, xi])
+                img = save_imgs[key]
+                ax.imshow(
+                    img,
+                    cmap="gray",
                     vmin=np.percentile(img.flatten(), 1),
-                    vmax=np.percentile(img.flatten(), 99))
-            ax.set_title(key)
-            axes[yi, xi] = ax
+                    vmax=np.percentile(img.flatten(), 99),
+                )
+                ax.set_title(key)
+                axes[yi, xi] = ax
 
-    ax_corr = fig.add_subplot(gs[2, :])
-    start_corr = metrics["zdrift"]["start_corr"]
-    end_corr = metrics["zdrift"]["end_corr"]    
-    start_idx = metrics["zdrift"]["start_frame"]
-    end_idx = metrics["zdrift"]["end_frame"]
-    zdrift_um = metrics["zdrift"]["z_drift_um"]
+        ax_corr = fig.add_subplot(gs[2, :])
+        start_corr = metrics["zdrift"]["start_corr"]
+        end_corr = metrics["zdrift"]["end_corr"]
+        start_idx = metrics["zdrift"]["start_frame"]
+        end_idx = metrics["zdrift"]["end_frame"]
+        zdrift_um = metrics["zdrift"]["z_drift_um"]
 
-    ax_corr.plot(start_corr, label='start_corr')
-    ax_corr.plot(end_corr, label='end_corr')
-    ax_corr.legend()
-    ax_corr.axvline(start_idx, color='k', linestyle='--')
-    ax_corr.axvline(end_idx, color='k', linestyle='--')
-    ax_corr.set_title(f'Start frame {start_idx}, end frame {end_idx}, zdrift = {zdrift_um} um')
-    ax_corr.set_xlabel('Z plane')
-    ax_corr.set_ylabel('Correlation')
-    
-    fig.tight_layout()
-    
-    # Save the image
-    save_figure_to_storage(
-        fig,
-        output_dir,
-        base_file,
-        f"zdrift",
-        dpi=300
-    )
-    
-    # save z-stack files (both raw and registered)
-    zstack_save_filepath = Path(args.output_dir) / unique_id / zstack_filepath.name
-    shutil.copy(str(zstack_filepath), str(zstack_save_filepath))
-    zstack_reg_save_filepath = Path(args.output_dir) / f'{unique_id}/{zstack_filepath.stem}_reg.h5'
-    with h5py.File(zstack_reg_save_filepath, 'w') as h:
-        h.create_dataset('data', data=local_zstack.zstack)
+        ax_corr.plot(start_corr, label="start_corr")
+        ax_corr.plot(end_corr, label="end_corr")
+        ax_corr.legend()
+        ax_corr.axvline(start_idx, color="k", linestyle="--")
+        ax_corr.axvline(end_idx, color="k", linestyle="--")
+        ax_corr.set_title(
+            f"Start frame {start_idx}, end frame {end_idx}, zdrift = {zdrift_um} um"
+        )
+        ax_corr.set_xlabel("Z plane")
+        ax_corr.set_ylabel("Correlation")
+
+        fig.tight_layout()
+
+        # Save the image
+        save_figure_to_storage(fig, output_dir, base_file, f"zdrift", dpi=300)
+
+        # save z-stack files (both raw and registered)
+        zstack_save_filepath = Path(args.output_dir) / unique_id / zstack_filepath.name
+        shutil.copy(str(zstack_filepath), str(zstack_save_filepath))
+        zstack_reg_save_filepath = (
+            Path(args.output_dir) / f"{unique_id}/{zstack_filepath.stem}_reg.h5"
+        )
+        with h5py.File(zstack_reg_save_filepath, "w") as h:
+            h.create_dataset("data", data=local_zstack.zstack)
+    except StopIteration:
+        logging.warning("No local z-stack found, skipping z-drift metrics.")
 
     # We remove stuff we don't need to save that would take space
     metrics.pop("mean")

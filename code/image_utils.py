@@ -1,5 +1,6 @@
 from PIL import Image
 
+
 def combine_images_vertically(
     images: list[Image.Image], padding: int = 10
 ) -> Image.Image:
