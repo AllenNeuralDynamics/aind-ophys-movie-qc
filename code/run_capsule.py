@@ -1,35 +1,28 @@
 import argparse
 import json
-import os
-from datetime import datetime as dt
 import logging
+import os
+import shutil
+from datetime import datetime as dt
 from pathlib import Path
 from typing import Union
-import shutil
 
 import h5py
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
 import numpy as np
-from aind_data_schema.core.quality_control import (
-    QCMetric,
-    QCStatus,
-    Status,
-    QCEvaluation,
-    Modality,
-    Stage,
-)
+from aind_data_schema.core.quality_control import (Modality, QCEvaluation,
+                                                   QCMetric, QCStatus, Stage,
+                                                   Status)
+from image_utils import combine_images_vertically  # Adjust import if needed
+from local_z_stack import LocalZStack
+from matplotlib.gridspec import GridSpec
 from oasis.functions import deconvolve as oasis_deconvolve
-
+from PIL import Image
 from scipy import ndimage
 from scipy.linalg import LinAlgError
 from scipy.stats import gaussian_kde
 from skimage import filters, measure
-from local_z_stack import LocalZStack
-
-from PIL import Image
-from image_utils import combine_images_vertically  # Adjust import if needed
 
 
 def save_qc_evaluation_to_file(
@@ -63,7 +56,9 @@ def save_qc_metric_to_file(metric: QCMetric, output_dir: Path, filename: str) ->
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
-def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict, z_drift: bool = False) -> None:
+def write_qc_evaluation(
+    output_dir: Path, unique_id: str, metrics: dict, z_drift: bool = False
+) -> None:
     """Write QC evaluations grouped by functional purpose.
 
     Parameters
@@ -347,7 +342,9 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict, z_drift
             value=zdrift_metrics_dict,
             reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift.png"),
             status_history=[
-                QCStatus(evaluator="Automated", timestamp=dt.now(), status=zdrift_status)
+                QCStatus(
+                    evaluator="Automated", timestamp=dt.now(), status=zdrift_status
+                )
             ],
         )
 
@@ -360,7 +357,9 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict, z_drift
             metrics=[zdrift_metrics],
         )
 
-        save_qc_evaluation_to_file(zdrift_evaluation, output_dir, f"{unique_id}_z_drift")
+        save_qc_evaluation_to_file(
+            zdrift_evaluation, output_dir, f"{unique_id}_z_drift"
+        )
 
     print(
         f"Successfully created QC evaluations groups with _evaluation.json suffix for: {unique_id}"
