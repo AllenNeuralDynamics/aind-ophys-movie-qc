@@ -63,7 +63,7 @@ def save_qc_metric_to_file(metric: QCMetric, output_dir: Path, filename: str) ->
         json.dump(json.loads(metric.model_dump_json()), f, indent=4)
 
 
-def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None:
+def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict, z_drift: bool = False) -> None:
     """Write QC evaluations grouped by functional purpose.
 
     Parameters
@@ -74,6 +74,8 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         unique_id number
     metrics: dict
         dictionary containing all calculated metrics
+    z_drift: bool
+        whether z-drift metrics were calculated
 
     Returns
     -------
@@ -308,59 +310,60 @@ def write_qc_evaluation(output_dir: Path, unique_id: str, metrics: dict) -> None
         merged_evaluation, output_dir, f"{unique_id}_roi_photon_neuropil_metrics"
     )
 
-    # 12. Z-drift Evaluation
-    zdrift_qc_threshold = 10  # TODO: where is the best place to put this threshold?
-    zdrift_metrics = []
-    zdrift = metrics.get("zdrift", -100)
-    if zdrift == -100:
-        zdrift_status = Status.PENDING
-    else:
-        zdrift_um = float(zdrift["z_drift_um"])
-        if (
-            abs(zdrift_um) <= zdrift_qc_threshold
-        ):  # Low drift TODO: expose this threshold somewhere
-            zdrift_status = Status.PASS
+    if z_drift:
+        # 12. Z-drift Evaluation
+        zdrift_qc_threshold = 10  # TODO: where is the best place to put this threshold?
+        zdrift_metrics = []
+        zdrift = metrics.get("zdrift", -100)
+        if zdrift == -100:
+            zdrift_status = Status.PENDING
         else:
-            zdrift_status = Status.FAIL
+            zdrift_um = float(zdrift["z_drift_um"])
+            if (
+                abs(zdrift_um) <= zdrift_qc_threshold
+            ):  # Low drift TODO: expose this threshold somewhere
+                zdrift_status = Status.PASS
+            else:
+                zdrift_status = Status.FAIL
 
-    zdrift_metrics_dict = {
-        "z_drift_um": zdrift_um,
-        "start_frame": int(zdrift["start_frame"]),
-        "end_frame": int(zdrift["end_frame"]),
-        "z_drift_frame": int(zdrift["z_drift_frame"]),
-        "start_frame_corr": round(zdrift["start_frame_corr"], 3),
-        "end_frame_corr": round(zdrift["end_frame_corr"], 3),
-        "nb_of_loops": int(zdrift["local_zstack_parameters"]["nb_of_loops"]),
-        "nb_of_planes": int(zdrift["local_zstack_parameters"]["nb_of_planes"]),
-        "z_spacing_um": round(zdrift["local_zstack_parameters"]["z_spacing_um"], 2),
-        "total_z_distance": round(
-            zdrift["local_zstack_parameters"]["total_z_distance"], 2
-        ),
-    }
+        zdrift_metrics_dict = {
+            "z_drift_um": zdrift_um,
+            "start_frame": int(zdrift["start_frame"]),
+            "end_frame": int(zdrift["end_frame"]),
+            "z_drift_frame": int(zdrift["z_drift_frame"]),
+            "start_frame_corr": round(zdrift["start_frame_corr"], 3),
+            "end_frame_corr": round(zdrift["end_frame_corr"], 3),
+            "nb_of_loops": int(zdrift["local_zstack_parameters"]["nb_of_loops"]),
+            "nb_of_planes": int(zdrift["local_zstack_parameters"]["nb_of_planes"]),
+            "z_spacing_um": round(zdrift["local_zstack_parameters"]["z_spacing_um"], 2),
+            "total_z_distance": round(
+                zdrift["local_zstack_parameters"]["total_z_distance"], 2
+            ),
+        }
 
-    zdrift_metrics = QCMetric(
-        name=f"{unique_id} Z-drift Analysis",
-        description="Z-drift analysis metrics",
-        value=zdrift_metrics_dict,
-        reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift.png"),
-        status_history=[
-            QCStatus(evaluator="Automated", timestamp=dt.now(), status=zdrift_status)
-        ],
-    )
+        zdrift_metrics = QCMetric(
+            name=f"{unique_id} Z-drift Analysis",
+            description="Z-drift analysis metrics",
+            value=zdrift_metrics_dict,
+            reference=str(f"{unique_id}/movie_qc/{unique_id}_registered_zdrift.png"),
+            status_history=[
+                QCStatus(evaluator="Automated", timestamp=dt.now(), status=zdrift_status)
+            ],
+        )
 
-    zdrift_evaluation = QCEvaluation(
-        modality=Modality.POPHYS,
-        stage=Stage.PROCESSING,
-        name=f"Z-drift Analysis",
-        description=f"Analysis of z-drift in the recording, with threshold {zdrift_qc_threshold} um",
-        allow_failed_metrics=False,
-        metrics=[zdrift_metrics],
-    )
+        zdrift_evaluation = QCEvaluation(
+            modality=Modality.POPHYS,
+            stage=Stage.PROCESSING,
+            name=f"Z-drift Analysis",
+            description=f"Analysis of z-drift in the recording, with threshold {zdrift_qc_threshold} um",
+            allow_failed_metrics=False,
+            metrics=[zdrift_metrics],
+        )
 
-    save_qc_evaluation_to_file(zdrift_evaluation, output_dir, f"{unique_id}_z_drift")
+        save_qc_evaluation_to_file(zdrift_evaluation, output_dir, f"{unique_id}_z_drift")
 
     print(
-        f"Successfully created 12 QC evaluation groups with _evaluation.json suffix for: {unique_id}"
+        f"Successfully created QC evaluations groups with _evaluation.json suffix for: {unique_id}"
     )
 
 
@@ -1555,8 +1558,10 @@ if __name__ == "__main__":  # pragma: nocover
         )
         with h5py.File(zstack_reg_save_filepath, "w") as h:
             h.create_dataset("data", data=local_zstack.zstack)
+        z_drift = True
     except StopIteration:
         logging.warning("No local z-stack found, skipping z-drift metrics.")
+        z_drift = False
 
     # We remove stuff we don't need to save that would take space
     metrics.pop("mean")
@@ -1573,4 +1578,4 @@ if __name__ == "__main__":  # pragma: nocover
     with open(os.path.join(output_dir, base_file + "_metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
 
-    write_qc_evaluation(output_dir, unique_id, metrics)
+    write_qc_evaluation(output_dir, unique_id, metrics, z_drift=z_drift)
