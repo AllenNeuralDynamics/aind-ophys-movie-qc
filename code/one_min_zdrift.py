@@ -33,96 +33,9 @@ def get_one_min_emf(data, frame_rate, threshold_sec=30):
     return emf
 
 
-def run_and_save_zdrift_results(plane_dir,
-								number_of_z_planes=81,
-								z_step=0.75,
-								zstack_dir_base=Path('/root/capsule/scratch/zdrift/local_zstack_reg'),
-								emf_dir_base=Path('/root/capsule/scratch/zdrift/one_min_emf'),
-								save_dir_base = Path('/root/capsule/scratch/zdrift/zdrift_results')):
-	if isinstance(plane_dir, str):
-		plane_dir = Path(plane_dir)
-	if isinstance(zstack_dir_base, str):
-		zstack_dir_base = Path(zstack_dir_base)
-	if isinstance(emf_dir_base, str):
-		emf_dir_base = Path(emf_dir_base)
-	if isinstance(save_dir_base, str):
-		save_dir_base = Path(save_dir_base)
-
-	session_key, plane_id = get_session_key_plane_id_from_plane_path(plane_dir)
-
-	save_dir = save_dir_base / session_key
-	save_dir.mkdir(exist_ok=True, parents=True)
-	save_fn = f'{plane_id}_zdrift_results.npy'
-	fig_save_fn = f'{session_key}_{plane_id}_zdrift.png'
-	if (save_dir / save_fn).exists() and (save_dir / fig_save_fn).exists():
-		print(f'Already saved {session_key}  {plane_id}')
-		return
-
-	range_y, range_x = get_motion_correction_crop_xy_range(plane_dir)
-	
-	zstack_dir = zstack_dir_base / session_key
-	zstack_fn = zstack_dir / f'{plane_id}.h5'
-	emf_dir = emf_dir_base / session_key
-	emf_fn = emf_dir / f'{plane_id}_one_min_emf.h5'
-	with h5py.File(zstack_fn, 'r') as hf:
-		zstack = hf['zstack'][:]
-	with h5py.File(emf_fn, 'r') as hf:
-		emf = hf['data'][:]
-	ref_zstack_crop = zstack[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
-	episodic_mean_fovs_crop = emf[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
-	
-	plane_name = f'{session_key}_{plane_id}'
-	results = calc_zdrift_from_images(ref_zstack_crop, episodic_mean_fovs_crop,
-										plane_name, number_of_z_planes, z_step)
-	
-	np.save(save_dir / save_fn, results)
-
-    # # Plot 1. z-drift
-	# ax = plot_session_zdrift(results)
-	# ax.set_title(f'{session_key}          {plane_id}')
-	# ax.set_xlabel('Time (min)')
-	# fig = ax.get_figure()
-	# fig.savefig(save_dir / fig_save_fn, dpi=300, bbox_inches='tight', transparent=False, facecolor='white')
-
-	# plt.close(fig)
-
-    # # Plot 2. shifts
-    # shifts_save_fn = f'{session_key}_{plane_id}_shifts.png'
-    # ax = plot_shifts(results)
-    # ax.set_title(f'{session_key}          {plane_id}')
-    # fig = ax.get_figure()
-    # fig.savefig(save_dir / shifts_save_fn, dpi=300, bbox_inches='tight', transparent=False, facecolor='white')
-    # plt.close(fig)
-
-    # # Plot 3. correlation coefficients
-    # cc_save_fn = f'{session_key}_{plane_id}_cc.png'
-    # num_frames = episodic_mean_fovs_crop.shape[0]
-    # downsample_factor = max(1, num_frames // 10)  # downsample to 10 points if possible
-    # ax = plot_correlation_coefficients(results, downsample_factor=downsample_factor)
-    # ax.set_title(f'{session_key}          {plane_id}')
-    # ax.set_xlabel('Zstack plane index')
-    # fig = ax.get_figure()
-    # fig.savefig(save_dir / cc_save_fn, dpi=300, bbox_inches='tight', transparent=False, facecolor='white')
-    # plt.close(fig)
-
-    # Save all 3 figures in one file
-    fig, axes = plt.subplots(1, 3, figsize=(12, 3))
-    
-    total_drift = abs(result['zdrift_um'].max() - result['zdrift_um'].min())
-
-    ax = plot_session_zdrift(result, ax=axes[0])    
-    ax = plot_shifts(result, ax=axes[1])
-    ax = plot_correlation_coefficients(result, ax=axes[2])
-    ax.set_ylim(0, 1)
-    fig.tight_layout()
-    fig.suptitle(f'{session_key}          {plane_id}\ndrift: {total_drift:.2f} um')
-    fig.savefig(save_dir / fig_save_fn, dpi=300, bbox_inches='tight', transparent=False, facecolor='white')
-    plt.close(fig)
-    
-
 ## Getting motion boundary for crop
 # Codes are from lamf_analysis.utils, and depends on aind_ophys_utils.motion_border_utils (which is copied over to this capsule)
-def get_motion_correction_crop_xy_range(plane_path: Union[Path, str]) -> tuple:
+def get_motion_correction_crop_xy_range(plane_path: Union[Path, str], session_json_path) -> tuple:
     """Get x-y ranges to crop motion-correction frame rolling
 
     # TODO: validate in case where max < 0 or min > 0, which may exist (JK 2023)
@@ -132,6 +45,8 @@ def get_motion_correction_crop_xy_range(plane_path: Union[Path, str]) -> tuple:
     ----------
     plane_path : Path
         Path to the plane directory
+    session_json_path : Path
+        Path to the session.json file
 
     Returns
     -------
@@ -153,7 +68,8 @@ def get_motion_correction_crop_xy_range(plane_path: Union[Path, str]) -> tuple:
         '*_motion_transform.csv'))[0]
     motion_df = pd.read_csv(motion_csv)
 
-    session_json = get_session_json_from_plane_path(plane_path)
+    with open(session_json_path) as f:
+        session_json = json.load(f)
     fov_info = session_json['data_streams'][0]['ophys_fovs'][0] # assume this data is the same for all fovs
     fov_height = fov_info['fov_height']
     fov_width = fov_info['fov_width']
@@ -173,38 +89,13 @@ def get_motion_correction_crop_xy_range(plane_path: Union[Path, str]) -> tuple:
     return range_y, range_x
 
 
-def get_session_json_from_plane_path(plane_path):
-    ''' Load session.json for a given plane path
-    '''
-    if isinstance(plane_path, str):
-        plane_path = Path(plane_path)
-    if not os.path.isdir(plane_path):
-        raise ValueError(f'Path not found ({plane_path})')
-    session_name = plane_path.parent.name.split('_processed')[0]
-    raw_path = plane_path.parent.parent / session_name
-    session_json_fn = Path(raw_path) / 'session.json'
-    with open(session_json_fn) as f:
-        session_json = json.load(f)
-    return session_json
-
 ## Getting filepaths from data assets
 # Copied from lamf_analysis.code_ocean.capsule_data_utils
-def get_frame_rate_from_plane_path(plane_path):
-    ''' Load frame rate for a given plane path
-    '''
-    if isinstance(plane_path, str):
-        plane_path = Path(plane_path)
-    if not os.path.isdir(plane_path):
-        raise ValueError(f'Path not found ({plane_path})')
-    session_json = get_session_json_from_plane_path(plane_path)
-    frame_rate = float(session_json['data_streams'][0]['ophys_fovs'][0]['frame_rate'])
-    return frame_rate
-
-
 def get_decrosstalked_movie_file(plane_path):
     ''' Load decrosstalked movie for a given plane path
     It can be retrieved from extraction folder.
     Faster than loading COMB object.
+    NOTE: Leaving here just in case we change the code to use decrosstalked movie
     '''
     if isinstance(plane_path, str):
         plane_path = Path(plane_path)
@@ -445,14 +336,3 @@ def plot_correlation_coefficients(result, ax=None, downsample_factor=10):
     ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     # plt.show()
     return ax
-
-
-#############################################################
-## Misc
-#############################################################
-def get_session_key_plane_id_from_plane_path(plane_path):
-	if isinstance(plane_path, str):
-		plane_path = Path(plane_path)
-	session_key = '_'.join(plane_path.parent.name.split('_')[1:3])
-	plane_id = plane_path.name
-	return session_key, plane_id

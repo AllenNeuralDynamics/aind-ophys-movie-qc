@@ -1334,7 +1334,7 @@ if __name__ == "__main__":  # pragma: nocover
 
         # Episodic mean FOVs with higher temporal resolution (1 min)
         #TODO: Better to use decrosstalked data.
-        one_min_emf = one_minb_zdrift.get_one_min_emf(data_pointer, frame_rate)
+        one_min_emf = one_min_zdrift.get_one_min_emf(data_pointer, frame_rate)
 
     metrics = {}
     metrics["crops"] = args.crop
@@ -1565,7 +1565,7 @@ if __name__ == "__main__":  # pragma: nocover
         zstack_reg = zs.register_local_z_stack(zstack_local_fn)
 
         # Calculate z-drift
-        range_y, range_x = one_min_zdrift.get_motion_correction_crop_xy_range(Path(args.input_dir))
+        range_y, range_x = one_min_zdrift.get_motion_correction_crop_xy_range(Path(args.input_dir), session_json_path)
 
         ref_zstack_crop = zstack[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
         episodic_mean_fovs_crop = one_min_emf[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
