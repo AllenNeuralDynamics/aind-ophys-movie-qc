@@ -31,3 +31,4 @@ RUN cd /.code-server \
     && rm code-server.tar.gz \
     && ln -s /.code-server/code-server-4.95.3-linux-amd64/bin/code-server  /usr/bin/code-server
 
+RUN apt-get update && apt-get install -y libgl1
