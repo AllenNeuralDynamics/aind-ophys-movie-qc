@@ -215,16 +215,17 @@ def fov_stack_register_phase_correlation(fov, stack, use_clahe=True, use_valid_p
 ## QC plots for z-drift
 
 # Save all 3 figures in one file
-def plot_all(result)
+def plot_all(result):
     fig, axes = plt.subplots(1, 3, figsize=(12, 3))
     
-    total_drift = abs(result['zdrift_um'].max() - result['zdrift_um'].min())
+    total_drift = result['z_drift_um']
 
     ax = plot_session_zdrift(result, ax=axes[0])    
     ax = plot_shifts(result, ax=axes[1])
     ax = plot_correlation_coefficients(result, ax=axes[2])
     ax.set_ylim(0, 1)
     fig.tight_layout()
+    fig.suptitle(f'Total z-drift: {total_drift:.2f} um', fontsize=16)
     return fig
 
 
@@ -242,7 +243,7 @@ def plot_session_zdrift(result, ax=None, cc_threshold=0.65,
         fig, ax = plt.subplots(1, 1, figsize=(4, 3))
     else:
         fig = ax.get_figure()
-    zdrift_um = result['zdrift_um']
+    zdrift_um = result['zdrift_um_each']
     max_cc = np.array([max(cc) for cc in result['corrcoef']])
     
     ax.plot(zdrift_um, color='black', zorder=1)
