@@ -6,6 +6,7 @@ import h5py
 from pathlib import Path
 import matplotlib.pyplot as plt
 import json
+from typing import Union
 
 from motion_border_utils import get_max_correction_from_df
 import zstack as zs
