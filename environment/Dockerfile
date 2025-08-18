@@ -18,7 +18,11 @@ RUN pip install -U --no-cache-dir \
     pydantic==2.11.6 \
     scikit-image==0.21.0 \
     scikit-learn==1.3.1 \
-    scipy==1.11.2
+    scipy==1.11.2 \
+    dask[distributed]==2025.07.0 \
+    seaborn==0.13.2 \
+    opencv-python==4.12.0.88
+
 
 ADD "https://github.com/coder/code-server/releases/download/v4.95.3/code-server-4.95.3-linux-amd64.tar.gz" /.code-server/code-server.tar.gz
 
