@@ -16,6 +16,7 @@ from aind_data_schema.core.quality_control import (Modality, QCEvaluation,
                                                    Status)
 from image_utils import combine_images_vertically  # Adjust import if needed
 from local_z_stack import LocalZStack
+import one_min_zdrift
 from matplotlib.gridspec import GridSpec
 from oasis.functions import deconvolve as oasis_deconvolve
 from PIL import Image
@@ -321,20 +322,7 @@ def write_qc_evaluation(
             else:
                 zdrift_status = Status.FAIL
 
-        zdrift_metrics_dict = {
-            "z_drift_um": zdrift_um,
-            "start_frame": int(zdrift["start_frame"]),
-            "end_frame": int(zdrift["end_frame"]),
-            "z_drift_frame": int(zdrift["z_drift_frame"]),
-            "start_frame_corr": round(zdrift["start_frame_corr"], 3),
-            "end_frame_corr": round(zdrift["end_frame_corr"], 3),
-            "nb_of_loops": int(zdrift["local_zstack_parameters"]["nb_of_loops"]),
-            "nb_of_planes": int(zdrift["local_zstack_parameters"]["nb_of_planes"]),
-            "z_spacing_um": round(zdrift["local_zstack_parameters"]["z_spacing_um"], 2),
-            "total_z_distance": round(
-                zdrift["local_zstack_parameters"]["total_z_distance"], 2
-            ),
-        }
+        zdrift_metrics_dict = zdrift # Keep for now for backward compatibility
 
         zdrift_metrics = QCMetric(
             name=f"{unique_id} Z-drift Analysis",
@@ -1344,6 +1332,10 @@ if __name__ == "__main__":  # pragma: nocover
         )
         shape = data_pointer.shape
 
+        # Episodic mean FOVs with higher temporal resolution (1 min)
+        #TODO: Better to use decrosstalked data.
+        one_min_emf = one_minb_zdrift.get_one_min_emf(data_pointer, frame_rate)
+
     metrics = {}
     metrics["crops"] = args.crop
     metrics["shape"] = shape
@@ -1488,79 +1480,119 @@ if __name__ == "__main__":  # pragma: nocover
         "physio_poisson_plot",
     )
 
-    # z-drift metrics
+    # # z-drift metrics
+    # session_json_path = next(Path(args.input_dir).rglob("session.json"))
+    # try:
+    #     zstack_filepath = next(
+    #         Path(args.input_dir).rglob(f"{unique_id}_z_stack_local.h5")
+    #     )
+    #     local_zstack = LocalZStack(
+    #         zstack_filepath=zstack_filepath,
+    #         physio_filepath=h5_file,
+    #         session_json_path=session_json_path,
+    #     )
+    #     metrics["zdrift"], save_imgs = (
+    #         local_zstack.get_z_drift()
+    #     )  # TODO: expose parameters
+
+    #     metrics["zdrift"]["local_zstack_parameters"] = local_zstack.meta
+
+    #     # Make the image
+    #     fig = plt.figure(figsize=(10, 15))
+    #     gs = GridSpec(3, 2, height_ratios=[1, 1, 0.5], figure=fig)
+    #     axes = np.empty((3, 2), dtype=object)
+
+    #     image_segments = ["start", "end"]
+    #     image_types = ["image", "zstack_plane"]
+    #     for yi, image_segment in enumerate(image_segments):
+    #         for xi, image_type in enumerate(image_types):
+    #             key = f"{image_segment}_{image_type}"
+    #             ax = fig.add_subplot(gs[yi, xi])
+    #             img = save_imgs[key]
+    #             ax.imshow(
+    #                 img,
+    #                 cmap="gray",
+    #                 vmin=np.percentile(img.flatten(), 1),
+    #                 vmax=np.percentile(img.flatten(), 99),
+    #             )
+    #             ax.set_title(key)
+    #             axes[yi, xi] = ax
+
+    #     ax_corr = fig.add_subplot(gs[2, :])
+    #     start_corr = metrics["zdrift"]["start_corr"]
+    #     end_corr = metrics["zdrift"]["end_corr"]
+    #     start_idx = metrics["zdrift"]["start_frame"]
+    #     end_idx = metrics["zdrift"]["end_frame"]
+    #     zdrift_um = metrics["zdrift"]["z_drift_um"]
+
+    #     ax_corr.plot(start_corr, label="start_corr")
+    #     ax_corr.plot(end_corr, label="end_corr")
+    #     ax_corr.legend()
+    #     ax_corr.axvline(start_idx, color="k", linestyle="--")
+    #     ax_corr.axvline(end_idx, color="k", linestyle="--")
+    #     ax_corr.set_title(
+    #         f"Start frame {start_idx}, end frame {end_idx}, zdrift = {zdrift_um} um"
+    #     )
+    #     ax_corr.set_xlabel("Z plane")
+    #     ax_corr.set_ylabel("Correlation")
+
+    #     fig.tight_layout()
+
+    #     # Save the image
+    #     save_figure_to_storage(fig, output_dir, base_file, f"zdrift", dpi=300)
+
+    #     # save z-stack files (both raw and registered)
+    #     zstack_save_filepath = Path(args.output_dir) / unique_id / zstack_filepath.name
+    #     shutil.copy(str(zstack_filepath), str(zstack_save_filepath))
+    #     zstack_reg_save_filepath = (
+    #         Path(args.output_dir) / f"{unique_id}/{zstack_filepath.stem}_reg.h5"
+    #     )
+    #     with h5py.File(zstack_reg_save_filepath, "w") as h:
+    #         h.create_dataset("data", data=local_zstack.zstack)
+    #     qc_z_drift = True
+    # except StopIteration:
+    #     logging.warning("No local z-stack found, skipping z-drift metrics.")
+    #     qc_z_drift = False
+    
+    # Updated z-drift plots
+    # Requires registered z-stack and 1-min episodic mean FOV files
     session_json_path = next(Path(args.input_dir).rglob("session.json"))
+    # 
     try:
         zstack_filepath = next(
             Path(args.input_dir).rglob(f"{unique_id}_z_stack_local.h5")
         )
-        local_zstack = LocalZStack(
-            zstack_filepath=zstack_filepath,
-            physio_filepath=h5_file,
-            session_json_path=session_json_path,
-        )
-        metrics["zdrift"], save_imgs = (
-            local_zstack.get_z_drift()
-        )  # TODO: expose parameters
+        zstack_reg = zs.register_local_z_stack(zstack_local_fn)
 
-        metrics["zdrift"]["local_zstack_parameters"] = local_zstack.meta
+        # Calculate z-drift
+        range_y, range_x = one_min_zdrift.get_motion_correction_crop_xy_range(Path(args.input_dir))
 
-        # Make the image
-        fig = plt.figure(figsize=(10, 15))
-        gs = GridSpec(3, 2, height_ratios=[1, 1, 0.5], figure=fig)
-        axes = np.empty((3, 2), dtype=object)
+        ref_zstack_crop = zstack[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
+        episodic_mean_fovs_crop = one_min_emf[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
 
-        image_segments = ["start", "end"]
-        image_types = ["image", "zstack_plane"]
-        for yi, image_segment in enumerate(image_segments):
-            for xi, image_type in enumerate(image_types):
-                key = f"{image_segment}_{image_type}"
-                ax = fig.add_subplot(gs[yi, xi])
-                img = save_imgs[key]
-                ax.imshow(
-                    img,
-                    cmap="gray",
-                    vmin=np.percentile(img.flatten(), 1),
-                    vmax=np.percentile(img.flatten(), 99),
-                )
-                ax.set_title(key)
-                axes[yi, xi] = ax
+        stack_parameters = zs.get_zstack_parameters(zstack_filepath)
+        
+        zdrift_results = one_min_zdrift.calc_zdrift_from_images(ref_zstack_crop, episodic_mean_fovs_crop,
+                                            stack_parameters['nb_of_planes'], stack_parameters['z_spacing_um'])
 
-        ax_corr = fig.add_subplot(gs[2, :])
-        start_corr = metrics["zdrift"]["start_corr"]
-        end_corr = metrics["zdrift"]["end_corr"]
-        start_idx = metrics["zdrift"]["start_frame"]
-        end_idx = metrics["zdrift"]["end_frame"]
-        zdrift_um = metrics["zdrift"]["z_drift_um"]
+        metrics["zdrift"] = zdrift_results
+        metrics["zdrift"]["stack_parameters"] = stack_parameters
 
-        ax_corr.plot(start_corr, label="start_corr")
-        ax_corr.plot(end_corr, label="end_corr")
-        ax_corr.legend()
-        ax_corr.axvline(start_idx, color="k", linestyle="--")
-        ax_corr.axvline(end_idx, color="k", linestyle="--")
-        ax_corr.set_title(
-            f"Start frame {start_idx}, end frame {end_idx}, zdrift = {zdrift_um} um"
-        )
-        ax_corr.set_xlabel("Z plane")
-        ax_corr.set_ylabel("Correlation")
-
-        fig.tight_layout()
-
-        # Save the image
+        # save z-drift qc image
+        fig = one_min_zdrift.plot_all(zdrift_results)
         save_figure_to_storage(fig, output_dir, base_file, f"zdrift", dpi=300)
 
-        # save z-stack files (both raw and registered)
-        zstack_save_filepath = Path(args.output_dir) / unique_id / zstack_filepath.name
-        shutil.copy(str(zstack_filepath), str(zstack_save_filepath))
+        # save registered z-stack
         zstack_reg_save_filepath = (
             Path(args.output_dir) / f"{unique_id}/{zstack_filepath.stem}_reg.h5"
         )
         with h5py.File(zstack_reg_save_filepath, "w") as h:
-            h.create_dataset("data", data=local_zstack.zstack)
+            h.create_dataset("data", data=zstack_reg)
         qc_z_drift = True
     except StopIteration:
         logging.warning("No local z-stack found, skipping z-drift metrics.")
         qc_z_drift = False
+
 
     # We remove stuff we don't need to save that would take space
     metrics.pop("mean")

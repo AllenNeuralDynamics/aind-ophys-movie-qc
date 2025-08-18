@@ -658,6 +658,34 @@ def local_zstack_metadata(zstack_path: Union[Path, str]) -> tuple:
     return scanimage_metadata, roi_groups
 
 
+def get_stack_parameters(zstack_path: Union[Path, str]):
+    """Get stack acquisition paramters from a local z-stack
+
+    """
+    zstack_path = Path(zstack_filepath)
+    si_metadata, _ = local_zstack_metadata(zstack_path)
+
+    nb_of_loops = int(si_metadata["SI.hStackManager.actualNumVolumes"])
+    nb_of_planes = int(si_metadata["SI.hStackManager.actualNumSlices"])
+    z_spacing_um = float(si_metadata["SI.hStackManager.actualStackZStepSize"])
+    with h5py.File(zstack_path, "r") as f:
+        if isinstance(f["data"], h5py.Dataset):
+            local_zstack_shape = f["data"].shape
+        else:
+            raise ValueError("'data' is not a dataset in the HDF5 file")
+
+    if (
+        nb_of_loops * nb_of_planes != local_zstack_shape[0]
+    ):
+        raise Exception("Number of frames in local z stack different from metadata")
+    stack_parameters = {
+        "nb_of_loops": nb_of_loops,
+        "nb_of_planes": nb_of_planes,
+        "z_spacing_um": z_spacing_um,
+    }
+    return stack_parameters
+
+
 ##################################################################################################
 # Array Utils
 # TODO: move to aind--ophys-utils (04/2024)

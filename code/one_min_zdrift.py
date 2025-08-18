@@ -5,111 +5,32 @@ import numpy as np
 import h5py
 from pathlib import Path
 import matplotlib.pyplot as plt
+import json
 
 from motion_border_utils import get_max_correction_from_df
 import zstack as zs
 
-def split_register_local_zstack(plane_dir,
-								save_dir_base=Path('/root/capsule/scratch/zdrift/local_zstack_reg')):
-	# For data uploaded from rig
-	# assume only 2 channels for now
-	# assume they are all targeted to VISp
-	# check if the zstack is already registered
-	if isinstance(plane_dir, str):
-		plane_dir = Path(plane_dir)
-	session_key, _ = get_session_key_plane_id_from_plane_path(plane_dir)
-	save_dir = save_dir_base / session_key
-	save_dir.mkdir(exist_ok=True, parents=True)
-	if (save_dir / 'VISp_0.h5').exists() and (save_dir / 'VISp_1.h5').exists():
-		print(f'Already registered {save_dir}')
-		return
 
-	raw_dir_name = plane_dir.parent.name.split('_processed_')[0]
-	raw_dir = plane_dir.parent.parent / raw_dir_name
-	local_zstack_fns_pre_split = list((raw_dir / 'pophys').glob('*_local_z_stack0.tiff'))
-	if len(local_zstack_fns_pre_split) == 0:
-		# check if the local z-stack is already split
-		if (raw_dir / 'pophys/VISp_0/VISp_0_z_stack_local.h5').exists() & \
-			(raw_dir / 'pophys/VISp_1/VISp_1_z_stack_local.h5').exists():
-			print('local z-stacks already split - register them')
-			for visp_ind in range(2):
-				zstack_local_fn = raw_dir / f'pophys/VISp_{visp_ind}/VISp_{visp_ind}_z_stack_local.h5'
-				zstack_reg = zs.register_local_z_stack(zstack_local_fn)
-				save_fn = save_dir / f'VISp_{visp_ind}.h5'
-				with h5py.File(save_fn, 'w') as hf:
-					hf.create_dataset('zstack', data=zstack_reg)
-		else:
-			raise FileNotFoundError('No z-stack found in the raw directory. ')
-	else:
-		assert len(local_zstack_fns_pre_split) == 1, f'Found {len(local_zstack_fns_pre_split)} local zstacks, expected 1'
-		local_zstack_fn_pre_split = local_zstack_fns_pre_split[0]
+def get_one_min_emf(data, frame_rate, threshold_sec=30):
+    num_frames = data.shape[0]
+    ny = data.shape[1]
+    nx = data.shape[2]
 
-		zstack_reg, channels_saved = zs.register_local_zstack_from_raw_tif(local_zstack_fn_pre_split)
-		for ch_ind, channel in enumerate(channels_saved):
-			save_fn = f'VISp_{1-ch_ind}.h5' # THE ORDER IS REVERSED (relative to the 'fov index' in session.json)
-			with h5py.File(save_dir / save_fn, 'w') as hf:
-				hf.create_dataset('zstack', data=zstack_reg[ch_ind])
-
-
-def save_one_min_emf(plane_dir,
-					 save_dir_base=Path('/root/capsule/scratch/zdrift/one_min_emf'),
-					 threshold_sec=30):
-	""" Save one minute episodic mean FOVs for a plane.
-    Parameters
-    ----------
-    plane_dir : str or Path
-        Path to the plane directory
-    save_dir_base : Path, optional
-        Base directory to save the episodic mean FOVs, by default Path('/root/capsule/scratch/zdrift/one_min_emf')
-    threshold_sec : int, optional
-        Threshold in seconds to decide if the last chunk should be merged with the previous one, by default 30
-
-    Returns
-    --------
-    None
-	"""
-	if isinstance(plane_dir, str):
-		plane_dir = Path(plane_dir) 
-	session_key, plane_id = get_session_key_plane_id_from_plane_path(plane_dir)
-
-	save_dir = save_dir_base / session_key
-	save_dir.mkdir(exist_ok=True, parents=True)
-	save_fn = save_dir / f'{plane_id}_one_min_emf.h5'
-	# check if the file already exists
-	if save_fn.exists():
-		print(f'Already saved {save_fn}')
-		return
-
-	frame_rate = get_frame_rate_from_plane_path(plane_dir)
-	one_minute_frames = int(round(frame_rate * 60))
-	last_minute_threshold = frame_rate * threshold_sec
-	movie_fn = get_decrosstalked_movie_file(plane_dir)
-	with h5py.File(movie_fn, 'r') as hf:
-		num_frames = hf['data'].shape[0]
-		ny = hf['data'].shape[1]
-		nx = hf['data'].shape[2]
-
-		# get chunks in serial
-		# first, use the quotient.
-		# if the remainder is less than a threshold, attach it to the last chunk
-		# otherwise, make it a separate chunk
-		# as a result, the last chunk can be, e.g., 0.5 to 1.5 minutes
-		dividers = np.arange(0, num_frames, one_minute_frames)
-		if max(dividers) != num_frames:
-			if (num_frames - max(dividers)) < last_minute_threshold:
-				dividers[-1] = num_frames
-			else:
-				dividers = np.append(dividers, num_frames)
-		emf = np.zeros((len(dividers)-1, ny, nx))
-		for i in range(len(dividers)-1):
-			emf[i, :, :] = np.mean(hf['data'][dividers[i]:dividers[i+1], :, :], axis=0)
-	
-	# save the data
-	with h5py.File(save_fn, 'w') as hf:
-		hf.create_dataset('data', data=emf)
-		hf.create_dataset('frame_rate', data=frame_rate)
-		hf.create_dataset('num_frames', data=num_frames)
-		hf.create_dataset('threshold_sec', data=threshold_sec)
+    # get chunks in serial
+    # first, use the quotient.
+    # if the remainder is less than a threshold, attach it to the last chunk
+    # otherwise, make it a separate chunk
+    # as a result, the last chunk can be, e.g., 0.5 to 1.5 minutes
+    dividers = np.arange(0, num_frames, one_minute_frames)
+    if max(dividers) != num_frames:
+        if (num_frames - max(dividers)) < last_minute_threshold:
+            dividers[-1] = num_frames
+        else:
+            dividers = np.append(dividers, num_frames)
+    emf = np.zeros((len(dividers)-1, ny, nx))
+    for i in range(len(dividers)-1):
+        emf[i, :, :] = np.mean(data[dividers[i]:dividers[i+1], :, :], axis=0)
+    return emf
 
 
 def run_and_save_zdrift_results(plane_dir,
@@ -156,35 +77,48 @@ def run_and_save_zdrift_results(plane_dir,
 	
 	np.save(save_dir / save_fn, results)
 
-    # Plot 1. z-drift
-	ax = plot_session_zdrift(results)
-	ax.set_title(f'{session_key}          {plane_id}')
-	ax.set_xlabel('Time (min)')
-	fig = ax.get_figure()
-	fig.savefig(save_dir / fig_save_fn, dpi=300, bbox_inches='tight', transparent=False, facecolor='white')
+    # # Plot 1. z-drift
+	# ax = plot_session_zdrift(results)
+	# ax.set_title(f'{session_key}          {plane_id}')
+	# ax.set_xlabel('Time (min)')
+	# fig = ax.get_figure()
+	# fig.savefig(save_dir / fig_save_fn, dpi=300, bbox_inches='tight', transparent=False, facecolor='white')
 
-	plt.close(fig)
+	# plt.close(fig)
 
-    # Plot 2. shifts
-    shifts_save_fn = f'{session_key}_{plane_id}_shifts.png'
-    ax = plot_shifts(results)
-    ax.set_title(f'{session_key}          {plane_id}')
-    fig = ax.get_figure()
-    fig.savefig(save_dir / shifts_save_fn, dpi=300, bbox_inches='tight', transparent=False, facecolor='white')
-    plt.close(fig)
+    # # Plot 2. shifts
+    # shifts_save_fn = f'{session_key}_{plane_id}_shifts.png'
+    # ax = plot_shifts(results)
+    # ax.set_title(f'{session_key}          {plane_id}')
+    # fig = ax.get_figure()
+    # fig.savefig(save_dir / shifts_save_fn, dpi=300, bbox_inches='tight', transparent=False, facecolor='white')
+    # plt.close(fig)
 
-    # Plot 3. correlation coefficients
-    cc_save_fn = f'{session_key}_{plane_id}_cc.png'
-    num_frames = episodic_mean_fovs_crop.shape[0]
-    downsample_factor = max(1, num_frames // 10)  # downsample to 10 points if possible
-    ax = plot_correlation_coefficients(results, downsample_factor=downsample_factor)
-    ax.set_title(f'{session_key}          {plane_id}')
-    ax.set_xlabel('Zstack plane index')
-    fig = ax.get_figure()
-    fig.savefig(save_dir / cc_save_fn, dpi=300, bbox_inches='tight', transparent=False, facecolor='white')
+    # # Plot 3. correlation coefficients
+    # cc_save_fn = f'{session_key}_{plane_id}_cc.png'
+    # num_frames = episodic_mean_fovs_crop.shape[0]
+    # downsample_factor = max(1, num_frames // 10)  # downsample to 10 points if possible
+    # ax = plot_correlation_coefficients(results, downsample_factor=downsample_factor)
+    # ax.set_title(f'{session_key}          {plane_id}')
+    # ax.set_xlabel('Zstack plane index')
+    # fig = ax.get_figure()
+    # fig.savefig(save_dir / cc_save_fn, dpi=300, bbox_inches='tight', transparent=False, facecolor='white')
+    # plt.close(fig)
+
+    # Save all 3 figures in one file
+    fig, axes = plt.subplots(1, 3, figsize=(12, 3))
+    
+    total_drift = abs(result['zdrift_um'].max() - result['zdrift_um'].min())
+
+    ax = plot_session_zdrift(result, ax=axes[0])    
+    ax = plot_shifts(result, ax=axes[1])
+    ax = plot_correlation_coefficients(result, ax=axes[2])
+    ax.set_ylim(0, 1)
+    fig.tight_layout()
+    fig.suptitle(f'{session_key}          {plane_id}\ndrift: {total_drift:.2f} um')
+    fig.savefig(save_dir / fig_save_fn, dpi=300, bbox_inches='tight', transparent=False, facecolor='white')
     plt.close(fig)
     
-
 
 ## Getting motion boundary for crop
 # Codes are from lamf_analysis.utils, and depends on aind_ophys_utils.motion_border_utils (which is copied over to this capsule)
@@ -288,7 +222,7 @@ def get_decrosstalked_movie_file(plane_path):
 #####################################################################
 ## Calculate z-drift from images and metadata
 def calc_zdrift_from_images(ref_zstack_crop, episodic_mean_fovs_crop,
-                             plane_id, number_of_z_planes, z_step,
+                             number_of_z_planes, z_step,
                              use_clahe=True, use_valid_pix=True):
     """ Calculating z-drift from images and metadata
     Temporary exposure to work with custom data structure
@@ -315,14 +249,13 @@ def calc_zdrift_from_images(ref_zstack_crop, episodic_mean_fovs_crop,
     corrcoef = np.asarray(corrcoef)
 
     center_z = number_of_z_planes // 2
-    zdrift_um = z_step * (matched_plane_indices - center_z)
+    zdrift_um_each = z_step * (matched_plane_indices - center_z)
+    total_zdrift_um = abs(zdrift_um.max() - zdrift_um.min())
 
-    results = {'plane_id': plane_id,
-                'zdrift_um': zdrift_um,
+    results = { 'z_drift_um': total_zdrift_um,
+                'zdrift_um_each': zdrift_um_each,
                 'matched_plane_indices': matched_plane_indices,
                 'corrcoef': corrcoef,
-                'segment_fov_registered': segment_reg_imgs,
-                'ref_zstack_crop': ref_zstack_crop,                   
                 'shift': shift_list,
                 'use_clahe': use_clahe,
                 'use_valid_pix': use_valid_pix}
@@ -389,6 +322,21 @@ def fov_stack_register_phase_correlation(fov, stack, use_clahe=True, use_valid_p
 
 ###############################################################
 ## QC plots for z-drift
+
+# Save all 3 figures in one file
+def plot_all(result)
+    fig, axes = plt.subplots(1, 3, figsize=(12, 3))
+    
+    total_drift = abs(result['zdrift_um'].max() - result['zdrift_um'].min())
+
+    ax = plot_session_zdrift(result, ax=axes[0])    
+    ax = plot_shifts(result, ax=axes[1])
+    ax = plot_correlation_coefficients(result, ax=axes[2])
+    ax.set_ylim(0, 1)
+    fig.tight_layout()
+    return fig
+
+
 def plot_session_zdrift(result, ax=None, cc_threshold=0.65,
                         add_colorbar=True):
     """Plot z-drift for all the segments in a session
