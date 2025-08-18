@@ -1489,8 +1489,8 @@ if __name__ == "__main__":  # pragma: nocover
     )
 
     # z-drift metrics
+    session_json_path = next(Path(args.input_dir).rglob("session.json"))
     try:
-        session_json_path = next(Path(args.input_dir).rglob("session.json"))
         zstack_filepath = next(
             Path(args.input_dir).rglob(f"{unique_id}_z_stack_local.h5")
         )
@@ -1557,10 +1557,10 @@ if __name__ == "__main__":  # pragma: nocover
         )
         with h5py.File(zstack_reg_save_filepath, "w") as h:
             h.create_dataset("data", data=local_zstack.zstack)
-        z_drift = True
+        qc_z_drift = True
     except StopIteration:
         logging.warning("No local z-stack found, skipping z-drift metrics.")
-        z_drift = False
+        qc_z_drift = False
 
     # We remove stuff we don't need to save that would take space
     metrics.pop("mean")
@@ -1577,4 +1577,4 @@ if __name__ == "__main__":  # pragma: nocover
     with open(os.path.join(output_dir, base_file + "_metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
 
-    write_qc_evaluation(output_dir, unique_id, metrics, z_drift=z_drift)
+    write_qc_evaluation(output_dir, unique_id, metrics, z_drift=qc_z_drift)
