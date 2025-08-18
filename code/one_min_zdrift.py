@@ -22,6 +22,8 @@ def get_one_min_emf(data, frame_rate, threshold_sec=30):
     # if the remainder is less than a threshold, attach it to the last chunk
     # otherwise, make it a separate chunk
     # as a result, the last chunk can be, e.g., 0.5 to 1.5 minutes
+    one_minute_frames = int(round(frame_rate * 60))
+	last_minute_threshold = frame_rate * threshold_sec
     dividers = np.arange(0, num_frames, one_minute_frames)
     if max(dividers) != num_frames:
         if (num_frames - max(dividers)) < last_minute_threshold:
