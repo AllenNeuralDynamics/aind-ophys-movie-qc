@@ -2,6 +2,7 @@
 # This is copied and refactored from lamf_analysis.code_ocean.capsule_data_utils.zdrift
 
 import numpy as np
+import pandas as pd
 import h5py
 from pathlib import Path
 import matplotlib.pyplot as plt
