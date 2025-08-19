@@ -1570,7 +1570,7 @@ if __name__ == "__main__":  # pragma: nocover
     # Calculate z-drift
     range_y, range_x = one_min_zdrift.get_motion_correction_crop_xy_range(processing_json_fp, motion_csv_path, session_json_path)
 
-    ref_zstack_crop = zstack[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
+    ref_zstack_crop = zstack_reg[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
     episodic_mean_fovs_crop = one_min_emf[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
 
     stack_parameters = zs.get_zstack_parameters(zstack_filepath)
