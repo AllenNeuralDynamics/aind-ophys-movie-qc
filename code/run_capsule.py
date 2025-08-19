@@ -1558,43 +1558,43 @@ if __name__ == "__main__":  # pragma: nocover
     # Requires registered z-stack and 1-min episodic mean FOV files
     session_json_path = next(Path(args.input_dir).rglob("session.json"))
     # 
-    try:
-        print('Trying new z-drift QC')
-        zstack_filepath = next(
-            Path(args.input_dir).rglob(f"{unique_id}_z_stack_local.h5")
-        )
-        zstack_reg = zs.register_local_z_stack(zstack_local_fn)
+    # try:
+    print('Trying new z-drift QC')
+    zstack_filepath = next(
+        Path(args.input_dir).rglob(f"{unique_id}_z_stack_local.h5")
+    )
+    zstack_reg = zs.register_local_z_stack(zstack_local_fn)
 
-        # Calculate z-drift
-        range_y, range_x = one_min_zdrift.get_motion_correction_crop_xy_range(Path(args.input_dir), session_json_path)
+    # Calculate z-drift
+    range_y, range_x = one_min_zdrift.get_motion_correction_crop_xy_range(Path(args.input_dir), session_json_path)
 
-        ref_zstack_crop = zstack[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
-        episodic_mean_fovs_crop = one_min_emf[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
+    ref_zstack_crop = zstack[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
+    episodic_mean_fovs_crop = one_min_emf[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
 
-        stack_parameters = zs.get_zstack_parameters(zstack_filepath)
-        
-        zdrift_results = one_min_zdrift.calc_zdrift_from_images(ref_zstack_crop, episodic_mean_fovs_crop,
-                                            stack_parameters['nb_of_planes'], stack_parameters['z_spacing_um'])
+    stack_parameters = zs.get_zstack_parameters(zstack_filepath)
+    
+    zdrift_results = one_min_zdrift.calc_zdrift_from_images(ref_zstack_crop, episodic_mean_fovs_crop,
+                                        stack_parameters['nb_of_planes'], stack_parameters['z_spacing_um'])
 
-        metrics["zdrift"] = zdrift_results
-        metrics["zdrift"]["stack_parameters"] = stack_parameters
+    metrics["zdrift"] = zdrift_results
+    metrics["zdrift"]["stack_parameters"] = stack_parameters
 
-        # save z-drift qc image
-        fig = one_min_zdrift.plot_all(zdrift_results)
-        save_figure_to_storage(fig, output_dir, base_file, f"zdrift", dpi=300)
+    # save z-drift qc image
+    fig = one_min_zdrift.plot_all(zdrift_results)
+    save_figure_to_storage(fig, output_dir, base_file, f"zdrift", dpi=300)
 
-        # save registered z-stack
-        zstack_reg_save_filepath = (
-            Path(args.output_dir) / f"{unique_id}/{zstack_filepath.stem}_reg.h5"
-        )
-        with h5py.File(zstack_reg_save_filepath, "w") as h:
-            h.create_dataset("data", data=zstack_reg)
-        qc_z_drift = True
-    except StopIteration:
-        logging.warning("No local z-stack found, skipping z-drift metrics.")
-        print('Failed getting local z-stack h5 file.')
-        qc_z_drift = False
-    print(f'qc_z_drift={qc_z_drift}')
+    # save registered z-stack
+    zstack_reg_save_filepath = (
+        Path(args.output_dir) / f"{unique_id}/{zstack_filepath.stem}_reg.h5"
+    )
+    with h5py.File(zstack_reg_save_filepath, "w") as h:
+        h.create_dataset("data", data=zstack_reg)
+    qc_z_drift = True
+    # except StopIteration:
+    #     logging.warning("No local z-stack found, skipping z-drift metrics.")
+    #     print('Failed getting local z-stack h5 file.')
+    #     qc_z_drift = False
+    # print(f'qc_z_drift={qc_z_drift}')
 
     # We remove stuff we don't need to save that would take space
     metrics.pop("mean")
