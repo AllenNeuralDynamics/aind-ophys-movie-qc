@@ -8,6 +8,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import json
 from typing import Union
+import skimage
 
 from motion_border_utils import get_max_correction_from_df
 import zstack as zs
