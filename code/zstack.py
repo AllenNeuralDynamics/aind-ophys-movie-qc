@@ -662,7 +662,7 @@ def get_stack_parameters(zstack_path: Union[Path, str]):
     """Get stack acquisition paramters from a local z-stack
 
     """
-    zstack_path = Path(zstack_filepath)
+    zstack_path = Path(zstack_path)
     si_metadata, _ = local_zstack_metadata(zstack_path)
 
     nb_of_loops = int(si_metadata["SI.hStackManager.actualNumVolumes"])
