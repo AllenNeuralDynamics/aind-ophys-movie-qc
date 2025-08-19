@@ -17,6 +17,7 @@ from aind_data_schema.core.quality_control import (Modality, QCEvaluation,
 from image_utils import combine_images_vertically  # Adjust import if needed
 # from local_z_stack import LocalZStack
 import one_min_zdrift
+import zstack as zs
 from matplotlib.gridspec import GridSpec
 from oasis.functions import deconvolve as oasis_deconvolve
 from PIL import Image
