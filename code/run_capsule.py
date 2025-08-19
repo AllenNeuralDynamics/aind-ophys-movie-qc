@@ -1573,7 +1573,7 @@ if __name__ == "__main__":  # pragma: nocover
     ref_zstack_crop = zstack_reg[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
     episodic_mean_fovs_crop = one_min_emf[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
 
-    stack_parameters = zs.get_zstack_parameters(zstack_filepath)
+    stack_parameters = zs.get_stack_parameters(zstack_filepath)
     
     zdrift_results = one_min_zdrift.calc_zdrift_from_images(ref_zstack_crop, episodic_mean_fovs_crop,
                                         stack_parameters['nb_of_planes'], stack_parameters['z_spacing_um'])
