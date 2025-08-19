@@ -1564,7 +1564,7 @@ if __name__ == "__main__":  # pragma: nocover
     zstack_filepath = next(
         Path(args.input_dir).rglob(f"{unique_id}_z_stack_local.h5")
     )
-    zstack_reg = zs.register_local_z_stack(zstack_local_fn)
+    zstack_reg = zs.register_local_z_stack(zstack_filepath)
 
     # Calculate z-drift
     range_y, range_x = one_min_zdrift.get_motion_correction_crop_xy_range(Path(args.input_dir), session_json_path)
