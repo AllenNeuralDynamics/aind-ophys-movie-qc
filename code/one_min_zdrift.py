@@ -38,7 +38,7 @@ def get_one_min_emf(data, frame_rate, threshold_sec=30):
 
 ## Getting motion boundary for crop
 # Codes are from lamf_analysis.utils, and depends on aind_ophys_utils.motion_border_utils (which is copied over to this capsule)
-def get_motion_correction_crop_xy_range(plane_path: Union[Path, str], session_json_path) -> tuple:
+def get_motion_correction_crop_xy_range(processing_json_fn, motion_csv, session_json_path) -> tuple:
     """Get x-y ranges to crop motion-correction frame rolling
 
     # TODO: validate in case where max < 0 or min > 0, which may exist (JK 2023)
@@ -46,8 +46,10 @@ def get_motion_correction_crop_xy_range(plane_path: Union[Path, str], session_js
 
     Parameters
     ----------
-    plane_path : Path
-        Path to the plane directory
+    processing_json_fn : Path
+        Path to the data_process.json file
+    motion_csv : Path
+        Path to the *_motion_transform.csv file
     session_json_path : Path
         Path to the session.json file
 
@@ -56,19 +58,14 @@ def get_motion_correction_crop_xy_range(plane_path: Union[Path, str], session_js
     list, list
         Lists of y range and x range, [start, end] pixel index
     """
+    
+    processing_json = json.load(open(processing_json_fn))
     try:
-        processing_json_fn = list((Path(plane_path) / 'motion_correction').glob(
-            'processing.json'))[0]
-        processing_json = json.load(open(processing_json_fn))
         max_shift_prop = processing_json['processing_pipeline']['data_processes'][0]['parameters']['suite2p_args']['maxregshift']
     except:
-        processing_json_fn = list((Path(plane_path) / 'motion_correction').glob(
-            '*_motion_correction_data_process.json'))[0]
-        processing_json = json.load(open(processing_json_fn))
         max_shift_prop = processing_json['parameters']['suite2p_args']['maxregshift']
+    #TODO: Choose based on the pipeline version
     
-    motion_csv = list((Path(plane_path) / 'motion_correction').glob(
-        '*_motion_transform.csv'))[0]
     motion_df = pd.read_csv(motion_csv)
 
     with open(session_json_path) as f:

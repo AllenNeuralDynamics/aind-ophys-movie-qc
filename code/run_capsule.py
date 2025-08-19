@@ -1285,8 +1285,8 @@ if __name__ == "__main__":  # pragma: nocover
 
     frame_rate = args.frame_rate
 
+    processing_json_fp = next(h5_file.parent.glob("*data_process.json"))
     if frame_rate == 0:
-        processing_json_fp = next(h5_file.parent.glob("*data_process.json"))
         with open(processing_json_fp, "r") as j:
             data = json.load(j)
         frame_rate = data["parameters"]["movie_frame_rate_hz"]
@@ -1558,6 +1558,7 @@ if __name__ == "__main__":  # pragma: nocover
     # Updated z-drift plots
     # Requires registered z-stack and 1-min episodic mean FOV files
     session_json_path = next(Path(args.input_dir).rglob("session.json"))
+    motion_csv_path = next(Path(args.input_dir).rglob(f"{unique_id}_motion_transform.csv"))
     # 
     # try:
     print('Trying new z-drift QC')
@@ -1567,7 +1568,7 @@ if __name__ == "__main__":  # pragma: nocover
     zstack_reg = zs.register_local_z_stack(zstack_filepath)
 
     # Calculate z-drift
-    range_y, range_x = one_min_zdrift.get_motion_correction_crop_xy_range(Path(args.input_dir), session_json_path)
+    range_y, range_x = one_min_zdrift.get_motion_correction_crop_xy_range(processing_json_fp, motion_csv_path, session_json_path)
 
     ref_zstack_crop = zstack[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
     episodic_mean_fovs_crop = one_min_emf[:, range_y[0]:range_y[1], range_x[0]:range_x[1]]
