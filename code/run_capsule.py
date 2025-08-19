@@ -1559,6 +1559,7 @@ if __name__ == "__main__":  # pragma: nocover
     session_json_path = next(Path(args.input_dir).rglob("session.json"))
     # 
     try:
+        print('Trying new z-drift QC')
         zstack_filepath = next(
             Path(args.input_dir).rglob(f"{unique_id}_z_stack_local.h5")
         )
@@ -1591,8 +1592,9 @@ if __name__ == "__main__":  # pragma: nocover
         qc_z_drift = True
     except StopIteration:
         logging.warning("No local z-stack found, skipping z-drift metrics.")
+        print('Failed getting local z-stack h5 file.')
         qc_z_drift = False
-
+    print(f'qc_z_drift={qc_z_drift}')
 
     # We remove stuff we don't need to save that would take space
     metrics.pop("mean")
