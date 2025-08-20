@@ -128,8 +128,7 @@ def calc_zdrift_from_images(ref_zstack_crop, episodic_mean_fovs_crop,
     stack_pre = zs.rolling_average_stack(stack_pre)
 
     # Run registration for each episodic mean FOVs
-    matched_plane_indices = np.zeros(
-        episodic_mean_fovs_crop.shape[0], dtype=int)
+    matched_plane_indices = []
     corrcoef = []
     segment_reg_imgs = []
     shift_list = []
@@ -137,15 +136,14 @@ def calc_zdrift_from_images(ref_zstack_crop, episodic_mean_fovs_crop,
         fov_reg_stack, cc, shift = fov_stack_register_phase_correlation(
             episodic_mean_fovs_crop[i], stack_pre, use_clahe=use_clahe,
             use_valid_pix=use_valid_pix)
-        matched_plane_indices[i] = np.argmax(cc)
+        matched_plane_indices.append(np.argmax(cc))
         corrcoef.append(cc)
         segment_reg_imgs.append(fov_reg_stack[np.argmax(cc)])
         shift_list.append(shift)
-    corrcoef = np.asarray(corrcoef)
-
     center_z = number_of_z_planes // 2
-    zdrift_um_each = z_step * (matched_plane_indices - center_z)
-    total_zdrift_um = abs(zdrift_um_each.max() - zdrift_um_each.min())
+    zdrift_um_each = z_step * (np.array(matched_plane_indices) - center_z)
+    zdrift_um_each = zdrift_um_each.tolist()  # convert to list for json serialization
+    total_zdrift_um = abs(np.max(zdrift_um_each) - np.min(zdrift_um_each))
 
     results = { 'z_drift_um': total_zdrift_um,
                 'zdrift_um_each': zdrift_um_each,

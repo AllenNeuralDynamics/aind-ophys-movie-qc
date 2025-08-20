@@ -1577,7 +1577,6 @@ if __name__ == "__main__":  # pragma: nocover
     
     zdrift_results = one_min_zdrift.calc_zdrift_from_images(ref_zstack_crop, episodic_mean_fovs_crop,
                                         stack_parameters['nb_of_planes'], stack_parameters['z_spacing_um'])
-
     metrics["zdrift"] = zdrift_results
     metrics["zdrift"]["stack_parameters"] = stack_parameters
 
