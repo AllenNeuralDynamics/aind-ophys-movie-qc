@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import json
 from typing import Union
 import skimage
+import scipy
+import os
 
 from motion_border_utils import get_max_correction_from_df
 import zstack as zs
