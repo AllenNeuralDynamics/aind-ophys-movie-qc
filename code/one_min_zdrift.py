@@ -145,7 +145,7 @@ def calc_zdrift_from_images(ref_zstack_crop, episodic_mean_fovs_crop,
 
     center_z = number_of_z_planes // 2
     zdrift_um_each = z_step * (matched_plane_indices - center_z)
-    total_zdrift_um = abs(zdrift_um.max() - zdrift_um.min())
+    total_zdrift_um = abs(zdrift_um_each.max() - zdrift_um_each.min())
 
     results = { 'z_drift_um': total_zdrift_um,
                 'zdrift_um_each': zdrift_um_each,
