@@ -1188,6 +1188,21 @@ def parse_args() -> argparse.Namespace:
 
     return parser.parse_args()
 
+# Function to ensure all values in the dictionary are JSON-serializable
+def make_json_serializable(data):
+    if isinstance(data, np.ndarray):  # Convert ndarray to list
+        return data.tolist()
+    elif isinstance(data, (np.int64, np.int32)):  # Convert numpy integers to Python int
+        return int(data)
+    elif isinstance(data, (np.float64, np.float32)):  # Convert numpy floats to Python float
+        return float(data)
+    elif isinstance(data, dict):  # Recursively process dictionaries
+        return {key: make_json_serializable(value) for key, value in data.items()}
+    elif isinstance(data, list):  # Recursively process lists
+        return [make_json_serializable(item) for item in data]
+    else:
+        return data  # Return the value as is if it's already serializable
+
 
 def write_legacy_movie_qc_metrics(
     output_dir: Path, unique_id: str, metrics: dict
@@ -1607,6 +1622,9 @@ if __name__ == "__main__":  # pragma: nocover
     metrics.pop("all_pixels_photon_per_pixel_per_frame")
     metrics.pop("sum_rois_neuropil")
     metrics.pop("all_neuropils_photons_per_rois_per_frame")
+
+    # Preprocess the metrics dictionary to make it JSON-serializable
+    metrics = make_json_serializable(metrics)
 
     # We save the metrics to a json file
     with open(os.path.join(output_dir, base_file + "_metrics.json"), "w") as f:
