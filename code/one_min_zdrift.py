@@ -222,11 +222,11 @@ def plot_all(result):
     
     total_drift = result['z_drift_um']
 
-    ax = plot_session_zdrift(result, ax=axes[0])    
+    ax = plot_session_zdrift(result, ax=axes[0], add_colorbar=False)
     ax = plot_shifts(result, ax=axes[1])
     ax = plot_correlation_coefficients(result, ax=axes[2])
     ax.set_ylim(0, 1)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0.03, 0.95, 0.95))
     fig.suptitle(f'Total z-drift: {total_drift:.2f} um', fontsize=16)
     return fig
 
@@ -245,7 +245,7 @@ def plot_session_zdrift(result, ax=None, cc_threshold=0.65,
         fig, ax = plt.subplots(1, 1, figsize=(4, 3))
     else:
         fig = ax.get_figure()
-    zdrift_um = result['zdrift_um_each']
+    zdrift_um = np.asarray(result['zdrift_um_each'])
     max_cc = np.array([max(cc) for cc in result['corrcoef']])
     
     ax.plot(zdrift_um, color='black', zorder=1)
@@ -268,24 +268,25 @@ def plot_session_zdrift(result, ax=None, cc_threshold=0.65,
         ax.set_ylim(ylim)
         ax.set_xlim(xlim)
 
-    # Add dual colorbar   
-    cax1 = fig.add_axes([ax.get_position().x1 + 0.01,
-                         ax.get_position().y0 + (ax.get_position().height) * cc_threshold,
-                         0.02,
-                         ax.get_position().height * (1 - cc_threshold)])
-    bar1 = plt.colorbar(h1, cax=cax1)
-    bar1.set_label('Correlation coefficient')
-    
-    # Position label relative to colorbar
-    bar1.ax.yaxis.set_label_coords(6, -0.5)
-    
-    # Create a second colorbar for the lower part
-    cax2 = fig.add_axes([ax.get_position().x1 + 0.01,
-                     ax.get_position().y0,
-                     0.02,
-                     ax.get_position().height * cc_threshold])
-    plt.colorbar(h2, cax=cax2)
-    
+    if add_colorbar:
+        # Add dual colorbar   
+        cax1 = fig.add_axes([ax.get_position().x1 + 0.01,
+                            ax.get_position().y0 + (ax.get_position().height) * cc_threshold,
+                            0.02,
+                            ax.get_position().height * (1 - cc_threshold)])
+        bar1 = plt.colorbar(h1, cax=cax1)
+        bar1.set_label('Correlation coefficient')
+        
+        # Position label relative to colorbar
+        bar1.ax.yaxis.set_label_coords(6, -0.5)
+        
+        # Create a second colorbar for the lower part
+        cax2 = fig.add_axes([ax.get_position().x1 + 0.01,
+                        ax.get_position().y0,
+                        0.02,
+                        ax.get_position().height * cc_threshold])
+        plt.colorbar(h2, cax=cax2)
+        
     ax.set_xlabel('Segment')
     ax.set_ylabel('Z-drift (um)')
     return ax
