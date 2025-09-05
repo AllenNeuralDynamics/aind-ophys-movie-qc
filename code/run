@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -ex
-ls -R ../data
 
+echo "This is the latest version....."
 # This is the master script for the capsule. When you click "Reproducible Run", the code in this file will execute.
 time python -u run_capsule.py "$@"
