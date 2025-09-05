@@ -1550,7 +1550,6 @@ if __name__ == "__main__":  # pragma: nocover
         save_figure_to_storage(fig, output_dir, base_file, f"zdrift", dpi=300)
 
         # save z-stack files (both raw and registered)
-        zstack_save_filepath = Path(args.output_dir) / unique_id / zstack_filepath.name
         zstack_reg_save_filepath = (
             Path(args.output_dir) / f"{unique_id}/movie_qc/{zstack_filepath.stem}_reg.h5"
         )
