@@ -1160,7 +1160,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max_pixel_range",
         type=int,
-        default=8000,
+        default=18423,
         help=("This is the pixel value above which we consider saturation occurred."),
     )
 
