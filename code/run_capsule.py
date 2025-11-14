@@ -366,7 +366,7 @@ def write_qc_evaluation(
             name=f"Z-drift Analysis",
             description=f"Analysis of z-drift in the recording, with threshold {zdrift_qc_threshold} um",
             allow_failed_metrics=False,
-            metrics=[zdrift_metrics],
+            metrics=[local_z_stack_slider, zdrift_metrics],
         )
 
         save_qc_evaluation_to_file(
