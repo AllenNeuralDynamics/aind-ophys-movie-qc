@@ -336,6 +336,18 @@ def write_qc_evaluation(
             ),
         }
 
+        local_z_stack_slider = QCMetric(
+            name=f"{unique_id} Local Stack Slider",
+            description=f"Interactive slider for {unique_id} local_z_stack.h5",
+            value="slider",
+            reference=zdrift["zstack_reg_filepath"],
+            status_history=[
+                QCStatus(
+                    evaluator="Automated", timestamp=dt.now(), status=Status.PASS
+                )
+            ]
+        )
+
         zdrift_metrics = QCMetric(
             name=f"{unique_id} Z-drift Analysis",
             description="Z-drift analysis metrics",
@@ -1555,6 +1567,8 @@ if __name__ == "__main__":  # pragma: nocover
         )
         with h5py.File(zstack_reg_save_filepath, "w") as h:
             h.create_dataset("data", data=local_zstack.zstack)
+
+        metrics["zdrift"]["zstack_reg_filepath"] = zstack_reg_save_filepath
         qc_z_drift = True
     except StopIteration:
         logging.warning("No local z-stack found, skipping z-drift metrics.")
