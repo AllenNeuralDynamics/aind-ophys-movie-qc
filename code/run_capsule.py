@@ -1568,7 +1568,7 @@ if __name__ == "__main__":  # pragma: nocover
         with h5py.File(zstack_reg_save_filepath, "w") as h:
             h.create_dataset("data", data=local_zstack.zstack)
 
-        metrics["zdrift"]["zstack_reg_filepath"] = zstack_reg_save_filepath
+        metrics["zdrift"]["zstack_reg_filepath"] = str(zstack_reg_save_filepath)
         qc_z_drift = True
     except StopIteration:
         logging.warning("No local z-stack found, skipping z-drift metrics.")
