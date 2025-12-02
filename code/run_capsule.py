@@ -111,6 +111,7 @@ def write_qc_evaluation(
         description="Analysis of intensity changes throughout the movie",
         allow_failed_metrics=False,
         metrics=[intensity_metric],
+        tags=["Operational QC"]
     )
     save_qc_evaluation_to_file(
         intensity_evaluation, output_dir, f"{unique_id}_intensity_change"
@@ -232,6 +233,7 @@ def write_qc_evaluation(
         description="Analysis of saturated, low intensity, and percentile pixel metrics in the recording (table-friendly)",
         allow_failed_metrics=False,
         metrics=[merged_pixel_metric],
+        tags=["Operational QC"]
     )
     save_qc_evaluation_to_file(
         merged_pixel_evaluation,
@@ -367,6 +369,7 @@ def write_qc_evaluation(
             description=f"Analysis of z-drift in the recording, with threshold {zdrift_qc_threshold} um",
             allow_failed_metrics=False,
             metrics=[local_z_stack_slider, zdrift_metrics],
+            tags=['Operational QC']
         )
 
         save_qc_evaluation_to_file(
