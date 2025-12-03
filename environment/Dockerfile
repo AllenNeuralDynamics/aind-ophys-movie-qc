@@ -9,7 +9,7 @@ ARG GIT_ACCESS_TOKEN
 COPY git-askpass /
 
 RUN pip install -U --no-cache-dir \
-    aind-data-schema==1.1.1 \
+    aind-data-schema==1.2.0 \
     aind-qcportal-schema==0.3.2 \
     h5py==3.9.0 \
     matplotlib==3.8.0 \
