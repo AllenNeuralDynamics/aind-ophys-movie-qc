@@ -229,7 +229,7 @@ def write_qc_evaluation(
     merged_pixel_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name="Pixel value distribution",
+        name="Op. QC: Pixel Saturation",
         description="Analysis of saturated, low intensity, and percentile pixel metrics in the recording (table-friendly)",
         allow_failed_metrics=False,
         metrics=[merged_pixel_metric],
@@ -365,10 +365,11 @@ def write_qc_evaluation(
         zdrift_evaluation = QCEvaluation(
             modality=Modality.POPHYS,
             stage=Stage.PROCESSING,
-            name=f"Z-drift Analysis",
+            name=f"Op. QC: Z-drift",
             description=f"Analysis of z-drift in the recording, with threshold {zdrift_qc_threshold} um",
             allow_failed_metrics=False,
-            metrics=[local_z_stack_slider, zdrift_metrics],
+            # metrics=[local_z_stack_slider, zdrift_metrics],
+            metrics=[zdrift_metrics],
             tags=['Operational QC']
         )
 
