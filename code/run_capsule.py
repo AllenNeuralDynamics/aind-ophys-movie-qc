@@ -24,6 +24,8 @@ from scipy.linalg import LinAlgError
 from scipy.stats import gaussian_kde
 from skimage import filters, measure
 
+SCANIMAGE_MAXIMUM_PIXEL_BRIGHTNESS_LEVEL = 18423
+
 
 def save_qc_evaluation_to_file(
     evaluation: QCEvaluation, output_dir: Path, filename: str
@@ -1163,7 +1165,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max_pixel_range",
         type=int,
-        default=18423,
+        default=SCANIMAGE_MAXIMUM_PIXEL_BRIGHTNESS_LEVEL,
         help=("This is the pixel value above which we consider saturation occurred."),
     )
 
