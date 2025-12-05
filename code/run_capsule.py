@@ -107,7 +107,7 @@ def write_qc_evaluation(
     intensity_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name="Intensity stability",
+        name="Op QC: Intensity Drift",
         description="Analysis of intensity changes throughout the movie",
         allow_failed_metrics=False,
         metrics=[intensity_metric],
@@ -1338,6 +1338,8 @@ if __name__ == "__main__":  # pragma: nocover
             start_frame=0,
             end_frame=-1,
         )
+
+        print("shape of full_length_cropped_video", full_length_cropped_video)
 
         # We extract a few frames from the beginning and end of the movie
         # to use for stability metrics
