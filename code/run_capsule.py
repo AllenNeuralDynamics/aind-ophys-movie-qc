@@ -1339,8 +1339,6 @@ if __name__ == "__main__":  # pragma: nocover
             end_frame=-1,
         )
 
-        print("shape of full_length_cropped_video", full_length_cropped_video)
-
         # We extract a few frames from the beginning and end of the movie
         # to use for stability metrics
         ignore_frames = 300
