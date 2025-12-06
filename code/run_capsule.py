@@ -24,6 +24,8 @@ from scipy.linalg import LinAlgError
 from scipy.stats import gaussian_kde
 from skimage import filters, measure
 
+SCANIMAGE_MAXIMUM_PIXEL_BRIGHTNESS_LEVEL = 18423
+
 
 def save_qc_evaluation_to_file(
     evaluation: QCEvaluation, output_dir: Path, filename: str
@@ -98,7 +100,7 @@ def write_qc_evaluation(
         reference=str(
             f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"
         ),
-        value=float(intensity_change),
+        value=f"{float(intensity_change):.2f}%",
         status_history=[
             QCStatus(evaluator="Automated", timestamp=dt.now(), status=status)
         ],
@@ -107,10 +109,11 @@ def write_qc_evaluation(
     intensity_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name="Intensity stability",
+        name="Op QC: Intensity Drift",
         description="Analysis of intensity changes throughout the movie",
         allow_failed_metrics=False,
         metrics=[intensity_metric],
+        tags=["Operational QC"]
     )
     save_qc_evaluation_to_file(
         intensity_evaluation, output_dir, f"{unique_id}_intensity_change"
@@ -144,7 +147,7 @@ def write_qc_evaluation(
     epilepsy_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name="Epilepsy probability",
+        name="QC Op. Epilepsy",
         description="Detection of potential epileptic activity in the recording",
         allow_failed_metrics=False,
         metrics=[epilepsy_metric],
@@ -228,10 +231,11 @@ def write_qc_evaluation(
     merged_pixel_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name="Pixel value distribution",
+        name="Op. QC: Pixel Saturation",
         description="Analysis of saturated, low intensity, and percentile pixel metrics in the recording (table-friendly)",
         allow_failed_metrics=False,
         metrics=[merged_pixel_metric],
+        tags=["Operational QC"]
     )
     save_qc_evaluation_to_file(
         merged_pixel_evaluation,
@@ -351,10 +355,11 @@ def write_qc_evaluation(
         zdrift_evaluation = QCEvaluation(
             modality=Modality.POPHYS,
             stage=Stage.PROCESSING,
-            name=f"Z-drift Analysis",
+            name=f"Op. QC: Z-drift",
             description=f"Analysis of z-drift in the recording, with threshold {zdrift_qc_threshold} um",
             allow_failed_metrics=False,
             metrics=[zdrift_metrics],
+            tags=['Operational QC']
         )
 
         save_qc_evaluation_to_file(
@@ -1160,7 +1165,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--max_pixel_range",
         type=int,
-        default=8000,
+        default=SCANIMAGE_MAXIMUM_PIXEL_BRIGHTNESS_LEVEL,
         help=("This is the pixel value above which we consider saturation occurred."),
     )
 
