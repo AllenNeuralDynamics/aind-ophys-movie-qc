@@ -109,7 +109,7 @@ def write_qc_evaluation(
     intensity_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name="Op QC: Intensity Drift",
+        name="Op. QC: Intensity Drift",
         description="Analysis of intensity changes throughout the movie",
         allow_failed_metrics=False,
         metrics=[intensity_metric],
@@ -147,7 +147,7 @@ def write_qc_evaluation(
     epilepsy_evaluation = QCEvaluation(
         modality=Modality.POPHYS,
         stage=Stage.PROCESSING,
-        name="QC Op. Epilepsy",
+        name="Op. QC Epilepsy",
         description="Detection of potential epileptic activity in the recording",
         allow_failed_metrics=False,
         metrics=[epilepsy_metric],
