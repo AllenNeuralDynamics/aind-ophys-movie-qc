@@ -1,4 +1,4 @@
-# hash:sha256:04b629546595c1ad87d8d67af73eda516d3db166d4945007310fa499b3c07f15
+# hash:sha256:52d1bdd202d1af0e3f67bb505677cb323485a4d21d161bd47711a974a1456a16
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/code-server-python-extensions-pack:v5.0
 
@@ -19,8 +19,8 @@ RUN pip3 install -U --no-cache-dir \
     numpy==2.4.4 \
     oasis-deconv==0.2.1 \
     pydantic==2.11.10 \
-    pydantic-settings \
-    pytz \
+    pydantic-settings==2.13.1 \
+    pytz==2026.1.post1 \
     scikit-image==0.26.0 \
     scikit-learn==1.8.0 \
     scipy==1.17.1
