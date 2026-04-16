@@ -1,10 +1,15 @@
-# hash:sha256:94f4145f68b6fc6ce2e7e87573137282e79fb09baf0bd0875b1e4704f14c8c60
+# hash:sha256:8371fe6b209174366ee47dee9df26a151a9d3f28bff66314acd86e6b3d475633
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/code-server-python-extensions-pack:v5.0
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG GIT_ASKPASS
 COPY git-ask-pass /
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip3 install -U --no-cache-dir \
     aind-data-schema \
