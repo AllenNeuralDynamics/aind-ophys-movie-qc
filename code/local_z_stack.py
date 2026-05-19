@@ -20,7 +20,7 @@ class LocalZStack:
     Args:
         zstack_filepath:  The path to the local z stack file
         physio_filepath:  The path to the physio movie to use in calculating z-drift
-        session_json_path:  The path to the session json file containing metadata about the session
+        acquisition_json_path:  The path to the acquisition json file containing metadata
 
     Attributes:
         ophys_experiment:  A LimsOphysExperiment object associated with this video
@@ -33,10 +33,10 @@ class LocalZStack:
         _physio_filepath:  The path to the physio movie to use in calculating z-drift
     """
 
-    def __init__(self, zstack_filepath, physio_filepath, session_json_path):
+    def __init__(self, zstack_filepath, physio_filepath, acquisition_json_path):
         self.zstack_filepath = zstack_filepath
         self.physio_filepath = physio_filepath
-        self.session_json_path = session_json_path
+        self.acquisition_json_path = acquisition_json_path
 
         self.meta = {}
         self.local_zstack_metadata()
@@ -453,24 +453,10 @@ class LocalZStack:
         ]
         self.meta["data_shape"] = local_zstack_shape
 
-        with open(self.session_json_path, "r") as f:
-            session_json = json.load(f)
-        xy_scale = float(
-            session_json["data_streams"][0]["ophys_fovs"][0]["fov_scale_factor"]
-        )
-        if (
-            session_json["data_streams"][0]["ophys_fovs"][0]["fov_scale_factor_unit"]
-            == "um/pixel"
-        ):
-            self.meta["fov_scale_factor"] = xy_scale
-        else:
-            raise NotImplementedError(
-                "Unhandled fov scale factor unit {}".format(
-                    session_json["data_streams"][0]["ophys_fovs"][0][
-                        "fov_scale_factor_unit"
-                    ]
-                )
-            )
+        from utils.metadata_utils import load_acquisition, get_fov_scale_factor
+
+        acquisition = load_acquisition(Path(self.acquisition_json_path))
+        self.meta["fov_scale_factor"] = get_fov_scale_factor(acquisition)
 
         if (
             self.meta["nb_of_loops"] * self.meta["nb_of_planes"]
