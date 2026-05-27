@@ -1,12 +1,10 @@
-# hash:sha256:565d1c6710270f90ad7f0586cd71ec39b0a0382f0aa57157bd8a5c03c63c4228
+# hash:sha256:75839a2bb31c86a64adf1958e8b2eb7157252f5a10e846b139bc37aa7486787f
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/jupyterlab:3.6.1-miniconda4.12.0-python3.9-ubuntu20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-
 ARG GIT_ASKPASS
-ARG GIT_ACCESS_TOKEN
-COPY git-askpass /
+COPY git-ask-pass /
 
 RUN pip install -U --no-cache-dir \
     aind-data-schema==1.2.0 \
@@ -19,11 +17,3 @@ RUN pip install -U --no-cache-dir \
     scikit-image==0.21.0 \
     scikit-learn==1.3.1 \
     scipy==1.11.2
-
-ADD "https://github.com/coder/code-server/releases/download/v4.95.3/code-server-4.95.3-linux-amd64.tar.gz" /.code-server/code-server.tar.gz
-
-RUN cd /.code-server \
-    && tar -xvf code-server.tar.gz \
-    && rm code-server.tar.gz \
-    && ln -s /.code-server/code-server-4.95.3-linux-amd64/bin/code-server  /usr/bin/code-server
-

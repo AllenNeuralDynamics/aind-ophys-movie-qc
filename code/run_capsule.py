@@ -26,6 +26,18 @@ from skimage import filters, measure
 
 SCANIMAGE_MAXIMUM_PIXEL_BRIGHTNESS_LEVEL = 18423
 
+# Frames skipped at each end of the movie when extracting stability windows.
+IGNORE_FRAMES = 300
+# Frames averaged at each end, offset by IGNORE_FRAMES from the absolute ends
+# of the movie.
+NB_BORDER_FRAMES_TO_AVG = 200
+# Minimum movie length (frames) required to run the full QC. Below this, the
+# capsule enters "short-movie mode" and skips the start/end stability window
+# slicing along with everything it gates: intensity drift, basic ROI
+# segmentation, photon flux per-ROI, d-prime, and the corresponding QC
+# evaluations.
+SHORT_MOVIE_MODE_THRESHOLD = 2 * (IGNORE_FRAMES + NB_BORDER_FRAMES_TO_AVG) + 1
+
 
 def save_qc_evaluation_to_file(
     evaluation: QCEvaluation, output_dir: Path, filename: str
@@ -59,7 +71,11 @@ def save_qc_metric_to_file(metric: QCMetric, output_dir: Path, filename: str) ->
 
 
 def write_qc_evaluation(
-    output_dir: Path, unique_id: str, metrics: dict, z_drift: bool = False
+    output_dir: Path,
+    unique_id: str,
+    metrics: dict,
+    z_drift: bool = False,
+    short_movie_mode: bool = False,
 ) -> None:
     """Write QC evaluations grouped by functional purpose.
 
@@ -73,6 +89,11 @@ def write_qc_evaluation(
         dictionary containing all calculated metrics
     z_drift: bool
         whether z-drift metrics were calculated
+    short_movie_mode: bool
+        whether the capsule is running in short-movie mode (movie shorter than
+        ``SHORT_MOVIE_MODE_THRESHOLD``). When True, the intensity-drift
+        and photon-detection evaluations are skipped, and the d-prime fields
+        are omitted from the SNR/event-detection evaluation.
 
     Returns
     -------
@@ -80,44 +101,45 @@ def write_qc_evaluation(
     """
 
     # 1. Intensity Change Evaluation
-    intensity_change = metrics.get("percent_change_intensity", 0.0)
-    if abs(intensity_change) >= 20:
-        status = Status.FAIL
-    elif abs(intensity_change) >= 10:
-        status = Status.PENDING
-    else:
-        status = Status.PASS
+    if not short_movie_mode:
+        intensity_change = metrics.get("percent_change_intensity", 0.0)
+        if abs(intensity_change) >= 20:
+            status = Status.FAIL
+        elif abs(intensity_change) >= 10:
+            status = Status.PENDING
+        else:
+            status = Status.PASS
 
-    intensity_metric = QCMetric(
-        name="Intensity stability",
-        description=(
-            "This metric quantifies the percent change in mean pixel intensity from the start to the end of the movie. "
-            "It is calculated as 100 * (end_mean - start_mean) / start_mean, where start_mean and end_mean are the average pixel values in the first and last 200 frames (ignoring the first and last 300 frames). "
-            "A large negative value indicates photobleaching or instability."
-            "Status is automatically assigned: PASS if |change| < 10%, PENDING if 10% <= |change| < 20%, FAIL if |change| >= 20%. "
-            "If the status is not PASS, review the intensity progression plot for abrupt drops or trends."
-        ),
-        reference=str(
-            f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"
-        ),
-        value=f"{float(intensity_change):.2f}%",
-        status_history=[
-            QCStatus(evaluator="Automated", timestamp=dt.now(), status=status)
-        ],
-    )
+        intensity_metric = QCMetric(
+            name="Intensity stability",
+            description=(
+                "This metric quantifies the percent change in mean pixel intensity from the start to the end of the movie. "
+                "It is calculated as 100 * (end_mean - start_mean) / start_mean, where start_mean and end_mean are the average pixel values in the first and last 200 frames (ignoring the first and last 300 frames). "
+                "A large negative value indicates photobleaching or instability."
+                "Status is automatically assigned: PASS if |change| < 10%, PENDING if 10% <= |change| < 20%, FAIL if |change| >= 20%. "
+                "If the status is not PASS, review the intensity progression plot for abrupt drops or trends."
+            ),
+            reference=str(
+                f"{unique_id}/movie_qc/{unique_id}_registered_physio_intensity_plot.png"
+            ),
+            value=f"{float(intensity_change):.2f}%",
+            status_history=[
+                QCStatus(evaluator="Automated", timestamp=dt.now(), status=status)
+            ],
+        )
 
-    intensity_evaluation = QCEvaluation(
-        modality=Modality.POPHYS,
-        stage=Stage.PROCESSING,
-        name="Op. QC: Intensity Drift",
-        description="Analysis of intensity changes throughout the movie",
-        allow_failed_metrics=False,
-        metrics=[intensity_metric],
-        tags=["Operational QC"]
-    )
-    save_qc_evaluation_to_file(
-        intensity_evaluation, output_dir, f"{unique_id}_intensity_change"
-    )
+        intensity_evaluation = QCEvaluation(
+            modality=Modality.POPHYS,
+            stage=Stage.PROCESSING,
+            name="Op. QC: Intensity Drift",
+            description="Analysis of intensity changes throughout the movie",
+            allow_failed_metrics=False,
+            metrics=[intensity_metric],
+            tags=["Operational QC"]
+        )
+        save_qc_evaluation_to_file(
+            intensity_evaluation, output_dir, f"{unique_id}_intensity_change"
+        )
 
     # 2. Epilepsy Probability Evaluation
     epilepsy_prob = metrics.get("epilepsy_probability", 0)
@@ -156,14 +178,21 @@ def write_qc_evaluation(
         epilepsy_evaluation, output_dir, f"{unique_id}_epilepsy_probability"
     )
 
-    # Merge SNR and Event Detection (D-prime) Evaluations into a single QCMetric
+    # Merge SNR and Event Detection (D-prime) Evaluations into a single QCMetric.
+    # D-prime fields are omitted on the short-movie skip path so a reviewer can
+    # tell "not computed" apart from a real zero.
     snr_dprime_values = {
         "SNR Mean": float(metrics.get("simple_snr_mean", 0.0)),
         "SNR Median": float(metrics.get("simple_snr_med", 0.0)),
         "SNR Standard Deviation": float(metrics.get("simple_snr_std", 0.0)),
-        "Median ROI D-prime": float(metrics.get("median_rois_dprime", 0.0)),
-        "ROI D-prime Standard Deviation": float(metrics.get("std_rois_dprime", 0.0)),
     }
+    if not short_movie_mode:
+        snr_dprime_values["Median ROI D-prime"] = float(
+            metrics.get("median_rois_dprime", 0.0)
+        )
+        snr_dprime_values["ROI D-prime Standard Deviation"] = float(
+            metrics.get("std_rois_dprime", 0.0)
+        )
     merged_snr_dprime_metric = QCMetric(
         name="Event detection statistics",
         description=(
@@ -243,71 +272,74 @@ def write_qc_evaluation(
         f"{unique_id}_saturated_low_percentile_pixels",
     )
 
-    # Paths to the two images to combine
-    seg_img_path = os.path.join(
-        output_dir, f"{unique_id}_registered_basic_segmentation_image.png"
-    )
-    poisson_img_path = os.path.join(
-        output_dir, f"{unique_id}_registered_physio_poisson_plot.png"
-    )
-    combined_img_path = os.path.join(
-        output_dir, f"{unique_id}_roi_and_photon_metrics.png"
-    )
+    if not short_movie_mode:
+        # Paths to the two images to combine
+        seg_img_path = os.path.join(
+            output_dir, f"{unique_id}_registered_basic_segmentation_image.png"
+        )
+        poisson_img_path = os.path.join(
+            output_dir, f"{unique_id}_registered_physio_poisson_plot.png"
+        )
+        combined_img_path = os.path.join(
+            output_dir, f"{unique_id}_roi_and_photon_metrics.png"
+        )
 
-    # Read images and stack vertically using PIL utility
-    seg_img = Image.open(seg_img_path)
-    poisson_img = Image.open(poisson_img_path)
-    combined_img = combine_images_vertically([seg_img, poisson_img])
-    combined_img.save(combined_img_path)
+        # Read images and stack vertically using PIL utility
+        seg_img = Image.open(seg_img_path)
+        poisson_img = Image.open(poisson_img_path)
+        combined_img = combine_images_vertically([seg_img, poisson_img])
+        combined_img.save(combined_img_path)
 
-    merged_values = {
-        "Mean ROI Intensity": float(metrics.get("mean_rois_intensity", 0.0)),
-        "ROI Segmentation Threshold": float(metrics.get("rois_threshold", 0.0)),
-        "Median ROI Neuropil Sum": float(metrics.get("median_sum_rois_neuropil", 0.0)),
-        "Photon Gain": float(metrics.get("photon_gain")),
-        "Photon Offset": float(metrics.get("photon_offset")),
-        "Background Noise": float(metrics.get("background_noise")),
-        "Photon Flux Median": float(
-            metrics.get("photon_flux_median_per_pixel_per_frame")
-        ),
-        "Mean Photons per ROI per Frame": float(
-            metrics.get("mean_photons_per_roi_per_frame")
-        ),
-        "Mean Photons per ROI per Second": float(
-            metrics.get("mean_photons_per_roi_per_s")
-        ),
-        "Mean Photons per Neuropil per Second": float(
-            metrics.get("mean_photons_per_neuropil_per_s")
-        ),
-    }
-    merged_metric = QCMetric(
-        name="Photon detection statistics",
-        description=(
-            "This metric summarizes photon detection."
-            "ROI segmentation is performed using Otsu thresholding on a high-pass filtered median image from the start of the movie. "
-            "Mean ROI intensity, segmentation threshold, and median neuropil sum are reported."
-            "Photon gain and offset are estimated by fitting the variance vs. mean relationship for non-saturated pixels. "
-            "Photon flux and background noise are derived from these parameters. "
-            "Photon statistics are reported as mean/median values per ROI and neuropil, per frame and per second."
-            "Status is always PASS (no automatic threshold). Review for outliers or unexpected values."
-        ),
-        value=merged_values,
-        reference=combined_img_path,
-        status_history=[
-            QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)
-        ],
-    )
-    merged_evaluation = QCEvaluation(
-        modality=Modality.POPHYS,
-        stage=Stage.PROCESSING,
-        name="Photon detection statistics",
-        description="Analysis of ROI detection, photon-related parameters, and neuropil photon counts, with combined plot.",
-        allow_failed_metrics=False,
-        metrics=[merged_metric],
-    )
-    save_qc_evaluation_to_file(
-        merged_evaluation, output_dir, f"{unique_id}_roi_photon_neuropil_metrics"
-    )
+        merged_values = {
+            "Mean ROI Intensity": float(metrics.get("mean_rois_intensity", 0.0)),
+            "ROI Segmentation Threshold": float(metrics.get("rois_threshold", 0.0)),
+            "Median ROI Neuropil Sum": float(
+                metrics.get("median_sum_rois_neuropil", 0.0)
+            ),
+            "Photon Gain": float(metrics.get("photon_gain")),
+            "Photon Offset": float(metrics.get("photon_offset")),
+            "Background Noise": float(metrics.get("background_noise")),
+            "Photon Flux Median": float(
+                metrics.get("photon_flux_median_per_pixel_per_frame")
+            ),
+            "Mean Photons per ROI per Frame": float(
+                metrics.get("mean_photons_per_roi_per_frame")
+            ),
+            "Mean Photons per ROI per Second": float(
+                metrics.get("mean_photons_per_roi_per_s")
+            ),
+            "Mean Photons per Neuropil per Second": float(
+                metrics.get("mean_photons_per_neuropil_per_s")
+            ),
+        }
+        merged_metric = QCMetric(
+            name="Photon detection statistics",
+            description=(
+                "This metric summarizes photon detection."
+                "ROI segmentation is performed using Otsu thresholding on a high-pass filtered median image from the start of the movie. "
+                "Mean ROI intensity, segmentation threshold, and median neuropil sum are reported."
+                "Photon gain and offset are estimated by fitting the variance vs. mean relationship for non-saturated pixels. "
+                "Photon flux and background noise are derived from these parameters. "
+                "Photon statistics are reported as mean/median values per ROI and neuropil, per frame and per second."
+                "Status is always PASS (no automatic threshold). Review for outliers or unexpected values."
+            ),
+            value=merged_values,
+            reference=combined_img_path,
+            status_history=[
+                QCStatus(evaluator="Automated", timestamp=dt.now(), status=Status.PASS)
+            ],
+        )
+        merged_evaluation = QCEvaluation(
+            modality=Modality.POPHYS,
+            stage=Stage.PROCESSING,
+            name="Photon detection statistics",
+            description="Analysis of ROI detection, photon-related parameters, and neuropil photon counts, with combined plot.",
+            allow_failed_metrics=False,
+            metrics=[merged_metric],
+        )
+        save_qc_evaluation_to_file(
+            merged_evaluation, output_dir, f"{unique_id}_roi_photon_neuropil_metrics"
+        )
 
     if z_drift:
         # 12. Z-drift Evaluation
@@ -1329,32 +1361,44 @@ if __name__ == "__main__":  # pragma: nocover
             end_frame=-1,
         )
 
+        shape = data_pointer.shape
+        short_movie_mode = shape[0] < SHORT_MOVIE_MODE_THRESHOLD
+
         # We extract a few frames from the beginning and end of the movie
         # to use for stability metrics
-        ignore_frames = 300
-        nb_border_frames_to_avg = 200
-        start_section = subsample_and_crop_video(
-            data_pointer=data_pointer,
-            subsample=1,
-            crop=args.crop,
-            start_frame=ignore_frames,
-            end_frame=nb_border_frames_to_avg + ignore_frames,
-        )
-        end_section = subsample_and_crop_video(
-            data_pointer=data_pointer,
-            subsample=1,
-            crop=args.crop,
-            start_frame=-(ignore_frames + nb_border_frames_to_avg + 1),
-            end_frame=-ignore_frames,
-        )
-        shape = data_pointer.shape
+        if not short_movie_mode:
+            start_section = subsample_and_crop_video(
+                data_pointer=data_pointer,
+                subsample=1,
+                crop=args.crop,
+                start_frame=IGNORE_FRAMES,
+                end_frame=NB_BORDER_FRAMES_TO_AVG + IGNORE_FRAMES,
+            )
+            end_section = subsample_and_crop_video(
+                data_pointer=data_pointer,
+                subsample=1,
+                crop=args.crop,
+                start_frame=-(IGNORE_FRAMES + NB_BORDER_FRAMES_TO_AVG + 1),
+                end_frame=-IGNORE_FRAMES,
+            )
+        else:
+            logging.warning(
+                "Movie has %d frames (< SHORT_MOVIE_MODE_THRESHOLD=%d); "
+                "skipping stability-window metrics (intensity drift, "
+                "segmentation, photon flux per-ROI, d-prime) and their QC "
+                "evaluations.",
+                shape[0], SHORT_MOVIE_MODE_THRESHOLD,
+            )
+            start_section = None
+            end_section = None
 
     metrics = {}
     metrics["crops"] = args.crop
     metrics["shape"] = shape
-    metrics["percent_change_intensity"] = get_percent_change_intensity(
-        start_section, end_section
-    )
+    if not short_movie_mode:
+        metrics["percent_change_intensity"] = get_percent_change_intensity(
+            start_section, end_section
+        )
     metrics["epilepsy_probability"], fig_epilespy = get_and_plot_epilepsy_probability(
         cropped_video, frame_rate=frame_rate
     )
@@ -1391,80 +1435,85 @@ if __name__ == "__main__":  # pragma: nocover
         "mean_projection_image",
     )
 
-    save_figure_to_storage(
-        plot_projection_image(start_section),
-        output_dir,
-        base_file,
-        "start_projection_image",
-    )
-
-    save_figure_to_storage(
-        plot_projection_image(end_section),
-        output_dir,
-        base_file,
-        "end_projection_image",
-    )
-
-    rois_data, roi_figure = get_and_plot_basic_segmentation(start_section)
-
-    save_figure_to_storage(
-        roi_figure, output_dir, base_file, "basic_segmentation_image"
-    )
-
-    metrics.update(rois_data)
     metrics.update(photon_gain_parameters)
 
-    # We use the photon gain and offset to convert segmented intensities to photon flux
-    metrics["all_rois_photons_per_rois_per_frame"] = convert_intensity_into_photon_flux(
-        metrics["sum_rois_intensity"], metrics["photon_offset"], metrics["photon_gain"]
-    )
-    metrics["all_neuropils_photons_per_rois_per_frame"] = (
-        convert_intensity_into_photon_flux(
-            metrics["sum_rois_neuropil"],
-            metrics["photon_offset"],
-            metrics["photon_gain"],
+    if not short_movie_mode:
+        save_figure_to_storage(
+            plot_projection_image(start_section),
+            output_dir,
+            base_file,
+            "start_projection_image",
         )
-    )
-    metrics["photon_offset"] = metrics["photon_offset"]
-    metrics["photon_gain"] = metrics["photon_gain"]
-    metrics["mean_photons_per_roi_per_frame"] = np.mean(
-        metrics["all_rois_photons_per_rois_per_frame"]
-    )
-    metrics["std_photons_per_roi_per_frame"] = np.std(
-        metrics["all_rois_photons_per_rois_per_frame"]
-    )
-    metrics["mean_photons_per_roi_per_s"] = frame_rate * np.mean(
-        metrics["all_rois_photons_per_rois_per_frame"]
-    )
-    metrics["std_photons_per_roi_per_s"] = frame_rate * np.std(
-        metrics["all_rois_photons_per_rois_per_frame"]
-    )
-    metrics["mean_photons_per_neuropil_per_s"] = frame_rate * np.mean(
-        metrics["all_neuropils_photons_per_rois_per_frame"]
-    )
-    metrics["std_photons_per_neuropil_per_s"] = frame_rate * np.std(
-        metrics["all_neuropils_photons_per_rois_per_frame"]
-    )
 
-    # Convert to dprime for spike detection
+        save_figure_to_storage(
+            plot_projection_image(end_section),
+            output_dir,
+            base_file,
+            "end_projection_image",
+        )
 
-    # We first convert photons into photons per second
-    all_rois_photons_per_second = (
-        metrics["all_rois_photons_per_rois_per_frame"] * frame_rate
-    )
-    all_neuropils_photons_per_second = (
-        metrics["all_neuropils_photons_per_rois_per_frame"] * frame_rate
-    )
+        rois_data, roi_figure = get_and_plot_basic_segmentation(start_section)
 
-    metrics["all_rois_dprime"] = get_dprime_indicator(
-        all_rois_photons_per_second,
-        all_neuropils_photons_per_second,
-        args.decay_time,
-        args.dff_single_event_size,
-    )
+        save_figure_to_storage(
+            roi_figure, output_dir, base_file, "basic_segmentation_image"
+        )
 
-    metrics["median_rois_dprime"] = np.median(metrics["all_rois_dprime"])
-    metrics["std_rois_dprime"] = np.std(metrics["all_rois_dprime"])
+        metrics.update(rois_data)
+
+        # We use the photon gain and offset to convert segmented intensities to
+        # photon flux
+        metrics["all_rois_photons_per_rois_per_frame"] = (
+            convert_intensity_into_photon_flux(
+                metrics["sum_rois_intensity"],
+                metrics["photon_offset"],
+                metrics["photon_gain"],
+            )
+        )
+        metrics["all_neuropils_photons_per_rois_per_frame"] = (
+            convert_intensity_into_photon_flux(
+                metrics["sum_rois_neuropil"],
+                metrics["photon_offset"],
+                metrics["photon_gain"],
+            )
+        )
+        metrics["mean_photons_per_roi_per_frame"] = np.mean(
+            metrics["all_rois_photons_per_rois_per_frame"]
+        )
+        metrics["std_photons_per_roi_per_frame"] = np.std(
+            metrics["all_rois_photons_per_rois_per_frame"]
+        )
+        metrics["mean_photons_per_roi_per_s"] = frame_rate * np.mean(
+            metrics["all_rois_photons_per_rois_per_frame"]
+        )
+        metrics["std_photons_per_roi_per_s"] = frame_rate * np.std(
+            metrics["all_rois_photons_per_rois_per_frame"]
+        )
+        metrics["mean_photons_per_neuropil_per_s"] = frame_rate * np.mean(
+            metrics["all_neuropils_photons_per_rois_per_frame"]
+        )
+        metrics["std_photons_per_neuropil_per_s"] = frame_rate * np.std(
+            metrics["all_neuropils_photons_per_rois_per_frame"]
+        )
+
+        # Convert to dprime for spike detection
+
+        # We first convert photons into photons per second
+        all_rois_photons_per_second = (
+            metrics["all_rois_photons_per_rois_per_frame"] * frame_rate
+        )
+        all_neuropils_photons_per_second = (
+            metrics["all_neuropils_photons_per_rois_per_frame"] * frame_rate
+        )
+
+        metrics["all_rois_dprime"] = get_dprime_indicator(
+            all_rois_photons_per_second,
+            all_neuropils_photons_per_second,
+            args.decay_time,
+            args.dff_single_event_size,
+        )
+
+        metrics["median_rois_dprime"] = np.median(metrics["all_rois_dprime"])
+        metrics["std_rois_dprime"] = np.std(metrics["all_rois_dprime"])
 
     save_figure_to_storage(
         plot_avg_intensity_progression(
@@ -1565,19 +1614,28 @@ if __name__ == "__main__":  # pragma: nocover
         logging.warning("No local z-stack found, skipping z-drift metrics.")
         qc_z_drift = False
 
-    # We remove stuff we don't need to save that would take space
+    # We remove stuff we don't need to save that would take space.
+    # These come from photon_gain_parameters and always exist.
     metrics.pop("mean")
     metrics.pop("var")
-    metrics.pop("all_rois_intensity")
-    metrics.pop("all_rois_dprime")
-    metrics.pop("all_rois_photons_per_rois_per_frame")
-    metrics.pop("sum_rois_intensity")
     metrics.pop("all_pixels_photon_per_pixel_per_frame")
-    metrics.pop("sum_rois_neuropil")
-    metrics.pop("all_neuropils_photons_per_rois_per_frame")
+    # These only exist when stability-window metrics ran; pass a default so
+    # the pop is a no-op (rather than KeyError) on the short-movie skip path.
+    metrics.pop("all_rois_intensity", None)
+    metrics.pop("all_rois_dprime", None)
+    metrics.pop("all_rois_photons_per_rois_per_frame", None)
+    metrics.pop("sum_rois_intensity", None)
+    metrics.pop("sum_rois_neuropil", None)
+    metrics.pop("all_neuropils_photons_per_rois_per_frame", None)
 
     # We save the metrics to a json file
     with open(os.path.join(output_dir, base_file + "_metrics.json"), "w") as f:
         json.dump(metrics, f, indent=4)
 
-    write_qc_evaluation(output_dir, unique_id, metrics, z_drift=qc_z_drift)
+    write_qc_evaluation(
+        output_dir,
+        unique_id,
+        metrics,
+        z_drift=qc_z_drift,
+        short_movie_mode=short_movie_mode,
+    )
