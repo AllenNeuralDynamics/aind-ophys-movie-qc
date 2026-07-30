@@ -1,0 +1,114 @@
+{
+	"version": 1,
+	"named_parameters": true,
+	"parameters": [
+		{
+			"id": "13B9Im1YaJSnA5ip",
+			"name": "input_dir",
+			"param_name": "input_dir",
+			"description": "Directory containing the motion-correction results and the raw asset metadata. Searched recursively for the registered movie.",
+			"help_text": "Directory containing the motion-correction results and the raw asset metadata. Searched recursively for the registered movie.",
+			"type": "text",
+			"value_type": "string",
+			"default_value": "../data"
+		},
+		{
+			"id": "TrvAa4eDwUaU7JZj",
+			"name": "output_dir",
+			"param_name": "output_dir",
+			"description": "Directory where output files will be saved.",
+			"help_text": "Directory where output files will be saved.",
+			"type": "text",
+			"value_type": "string",
+			"default_value": "../results"
+		},
+		{
+			"id": "p1UDXRkqnw2k33f1",
+			"name": "start_frame",
+			"param_name": "start_frame",
+			"description": "First frame of the movie block used for the main analysis.",
+			"help_text": "First frame of the movie block used for the main analysis.",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "1"
+		},
+		{
+			"id": "uEf0al5uYCyUtiEt",
+			"name": "end_frame",
+			"param_name": "end_frame",
+			"description": "Last frame of the movie block used for the main analysis.",
+			"help_text": "Last frame of the movie block used for the main analysis.",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "10000"
+		},
+		{
+			"id": "czSBar4ybJvUgMJC",
+			"name": "crop",
+			"param_name": "crop",
+			"description": "Pixels to remove from each edge before analysis, as the JSON list '[px_y, px_x]'. Useful to drop motion-correction edge artefacts. Defaults to [30, 30].",
+			"help_text": "Pixels to remove from each edge before analysis, as the JSON list '[px_y, px_x]'. Useful to drop motion-correction edge artefacts. Defaults to [30, 30].",
+			"type": "text",
+			"value_type": "string"
+		},
+		{
+			"id": "YWGnMSuam5du30Il",
+			"name": "max_pixel_range",
+			"param_name": "max_pixel_range",
+			"description": "Pixel value at or above which saturation is counted.",
+			"help_text": "Pixel value at or above which saturation is counted.",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "18423"
+		},
+		{
+			"id": "qsCRD7WQaNve3rbw",
+			"name": "min_pixel_range",
+			"param_name": "min_pixel_range",
+			"description": "Pixel value at or below which under-saturation is counted.",
+			"help_text": "Pixel value at or below which under-saturation is counted.",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "0"
+		},
+		{
+			"id": "YdaVGnbkSVnP8oAc",
+			"name": "decay_time",
+			"param_name": "decay_time",
+			"description": "Estimated half decay time of the event reporter, in seconds. The default is for GCaMP6f.",
+			"help_text": "Estimated half decay time of the event reporter, in seconds. The default is for GCaMP6f.",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "0.2"
+		},
+		{
+			"id": "lQVRayR6uaVlSWWz",
+			"name": "frame_rate",
+			"param_name": "frame_rate",
+			"description": "Frame rate in Hz, used only when it cannot be resolved from the acquisition metadata or the upstream motion-correction provenance. It scales the epilepsy event widths and every per-second photon statistic, so it is never defaulted silently.",
+			"help_text": "Frame rate in Hz, used only when it cannot be resolved from the acquisition metadata or the upstream motion-correction provenance. It scales the epilepsy event widths and every per-second photon statistic, so it is never defaulted silently.",
+			"type": "text",
+			"value_type": "number"
+		},
+		{
+			"id": "LXpbU1MAPeXn1I5l",
+			"name": "dff_single_event_size",
+			"param_name": "dff_single_event_size",
+			"description": "Estimated dF/F event size of the event reporter for single events, in arbitrary units. The default is for GCaMP6f.",
+			"help_text": "Estimated dF/F event size of the event reporter for single events, in arbitrary units. The default is for GCaMP6f.",
+			"type": "text",
+			"value_type": "number",
+			"default_value": "0.15"
+		},
+		{
+			"id": "uTIWR1ZlNkDq26fv",
+			"name": "verify",
+			"param_name": "verify",
+			"description": "Round-trip the emitted processing.json and quality_control.json through the core v2 schema objects after writing.",
+			"help_text": "Round-trip the emitted processing.json and quality_control.json through the core v2 schema objects after writing.",
+			"type": "text",
+			"value_type": "integer",
+			"default_value": "0"
+		}
+	]
+}
