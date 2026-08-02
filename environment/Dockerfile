@@ -1,4 +1,4 @@
-# hash:sha256:1154ada231931d211cee9bebcb73b42a530b3f37195ca1fa2bb776b428f418d0
+# hash:sha256:e8f4acbc677b03ca52eb98bf3906a5231a56b2ee6d48ef8350d0cd589ec083c2
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/mambaforge3:24.5.0-0-python3.12.4-ubuntu22.04
 
@@ -8,7 +8,7 @@ COPY git-ask-pass /
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        build-essential \
+        build-essential=12.9ubuntu3 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN --mount=type=secret,id=git-access-token \
