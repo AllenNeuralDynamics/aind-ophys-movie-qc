@@ -1,4 +1,4 @@
-# hash:sha256:e8f4acbc677b03ca52eb98bf3906a5231a56b2ee6d48ef8350d0cd589ec083c2
+# hash:sha256:c2285360fe2db54e4133e35b87cd24285f221622588b21be5b98ad361d13703f
 ARG REGISTRY_HOST
 FROM $REGISTRY_HOST/codeocean/mambaforge3:24.5.0-0-python3.12.4-ubuntu22.04
 
@@ -14,4 +14,4 @@ RUN apt-get update \
 RUN --mount=type=secret,id=git-access-token \
     GIT_ACCESS_TOKEN="$(cat /run/secrets/git-access-token)" \
     pip3 install -U --no-cache-dir \
-    -e git+https://github.com/AllenNeuralDynamics/aind-ophys-movie-qc-library.git@7cd8ce8#egg=aind-ophys-movie-qc-library
+    -e git+https://github.com/AllenNeuralDynamics/aind-ophys-movie-qc-library.git@045d0ac#egg=aind-ophys-movie-qc-library

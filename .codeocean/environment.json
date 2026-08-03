@@ -19,7 +19,7 @@
 		"pip3": {
 			"packages": [
 				{
-					"name": "git+https://github.com/AllenNeuralDynamics/aind-ophys-movie-qc-library.git@7cd8ce8#egg=aind-ophys-movie-qc-library"
+					"name": "git+https://github.com/AllenNeuralDynamics/aind-ophys-movie-qc-library.git@045d0ac#egg=aind-ophys-movie-qc-library"
 				}
 			],
 			"options": {},
