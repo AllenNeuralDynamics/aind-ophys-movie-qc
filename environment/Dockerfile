@@ -1,10 +1,11 @@
 # hash:sha256:75839a2bb31c86a64adf1958e8b2eb7157252f5a10e846b139bc37aa7486787f
-ARG REGISTRY_HOST
-FROM $REGISTRY_HOST/codeocean/jupyterlab:3.6.1-miniconda4.12.0-python3.9-ubuntu20.04
+FROM python:3.9-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG GIT_ASKPASS
-COPY git-ask-pass /
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install -U --no-cache-dir \
     aind-data-schema==1.2.0 \
@@ -17,3 +18,9 @@ RUN pip install -U --no-cache-dir \
     scikit-image==0.21.0 \
     scikit-learn==1.3.1 \
     scipy==1.11.2
+
+
+RUN mkdir -p /data /results /scratch /raw /zstacks
+COPY code/ /capsule/code
+RUN chmod +x /capsule/code/run
+
