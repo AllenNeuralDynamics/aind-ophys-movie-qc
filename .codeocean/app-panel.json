@@ -36,8 +36,8 @@
 			"id": "uEf0al5uYCyUtiEt",
 			"name": "end_frame",
 			"param_name": "end_frame",
-			"description": "Last frame of the movie block used for the main analysis.",
-			"help_text": "Last frame of the movie block used for the main analysis.",
+			"description": "End of the movie block used for the main analysis (exclusive).",
+			"help_text": "End of the movie block used for the main analysis (exclusive).",
 			"type": "text",
 			"value_type": "integer",
 			"default_value": "10000"
@@ -85,8 +85,8 @@
 			"id": "lQVRayR6uaVlSWWz",
 			"name": "frame_rate",
 			"param_name": "frame_rate",
-			"description": "Frame rate in Hz, used only when it cannot be resolved from the acquisition metadata or the upstream motion-correction provenance. It scales the epilepsy event widths and every per-second photon statistic, so it is never defaulted silently.",
-			"help_text": "Frame rate in Hz, used only when it cannot be resolved from the acquisition metadata or the upstream motion-correction provenance. It scales the epilepsy event widths and every per-second photon statistic, so it is never defaulted silently.",
+			"description": "Frame rate in Hz, used only when it cannot be resolved from the registered movie or the acquisition metadata. It scales the epilepsy event widths and every per-second photon statistic, so it is never defaulted silently.",
+			"help_text": "Frame rate in Hz, used only when it cannot be resolved from the registered movie or the acquisition metadata. It scales the epilepsy event widths and every per-second photon statistic, so it is never defaulted silently.",
 			"type": "text",
 			"value_type": "number"
 		},
@@ -99,16 +99,6 @@
 			"type": "text",
 			"value_type": "number",
 			"default_value": "0.15"
-		},
-		{
-			"id": "uTIWR1ZlNkDq26fv",
-			"name": "verify",
-			"param_name": "verify",
-			"description": "Round-trip the emitted processing.json and quality_control.json through the core v2 schema objects after writing.",
-			"help_text": "Round-trip the emitted processing.json and quality_control.json through the core v2 schema objects after writing.",
-			"type": "text",
-			"value_type": "integer",
-			"default_value": "0"
 		}
 	]
 }
