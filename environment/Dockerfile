@@ -1,19 +1,17 @@
-# hash:sha256:75839a2bb31c86a64adf1958e8b2eb7157252f5a10e846b139bc37aa7486787f
+# hash:sha256:2c13e88ac9432bfa7baa31280fe20087623c9f4153bf8bad8a3520f9607b1c2e
 ARG REGISTRY_HOST
-FROM $REGISTRY_HOST/codeocean/jupyterlab:3.6.1-miniconda4.12.0-python3.9-ubuntu20.04
+FROM $REGISTRY_HOST/codeocean/mambaforge3:24.5.0-0-python3.12.4-ubuntu22.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG GIT_ASKPASS
 COPY git-ask-pass /
 
-RUN pip install -U --no-cache-dir \
-    aind-data-schema==1.2.0 \
-    aind-qcportal-schema==0.3.2 \
-    h5py==3.9.0 \
-    matplotlib==3.8.0 \
-    numpy==1.26.0 \
-    oasis-deconv==0.2.0 \
-    pydantic==2.11.6 \
-    scikit-image==0.21.0 \
-    scikit-learn==1.3.1 \
-    scipy==1.11.2
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential=12.9ubuntu3 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN --mount=type=secret,id=git-access-token \
+    GIT_ACCESS_TOKEN="$(cat /run/secrets/git-access-token)" \
+    pip3 install -U --no-cache-dir \
+    -e git+https://github.com/AllenNeuralDynamics/aind-ophys-movie-qc-library.git@v0.2.0#egg=aind-ophys-movie-qc-library
